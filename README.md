@@ -19,5 +19,6 @@ cubecow &lt;3 canmoo (#74)
 - Navigate to `battlecode-scaffold-master` to run anything.
 - Compile with `ant build`
 - If you get errors, you probably didn't get the Battlecode files, so do this with `ant get`
+- Update to latest release with `ant update`
 - Run locally with `ant run`
 - If this is complicated, just use Eclipse... make your life easier.
