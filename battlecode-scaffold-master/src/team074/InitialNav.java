@@ -1,4 +1,4 @@
-package navtest;
+package team074;
 
 import battlecode.common.*;
 
