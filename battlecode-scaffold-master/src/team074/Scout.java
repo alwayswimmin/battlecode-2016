@@ -15,6 +15,24 @@ public class Scout extends Bot {
 	}
 	private static void action() throws GameActionException {
 		// take my turn
+		myLocation = rc.getLocation();
+		if (rc.isCoreReady()) {
+				Direction dirToMove = Direction.EAST;
+				if(Math.random() > 0.5) {
+					if(Math.random() > 0.3) {
+						dirToMove = Direction.NORTH_EAST;
+					} else {
+						dirToMove = Direction.SOUTH_EAST;
+					}
+				}
+				if (rc.canMove(dirToMove)) {
+					// Move
+					rc.move(dirToMove);
+				}
+		}
+		if(rc.getInfectedTurns() > 0) {
+			rc.disintegrate();
+		}
 		Clock.yield();
 	}
 }

@@ -19,7 +19,7 @@ public class Scout extends Bot {
 		if (rc.isCoreReady()) {
 				Direction dirToMove = Direction.EAST;
 				if(Math.random() > 0.5) {
-					if(Math.random() > 0.5) {
+					if(Math.random() > 0.3) {
 						dirToMove = Direction.NORTH_EAST;
 					} else {
 						dirToMove = Direction.SOUTH_EAST;
