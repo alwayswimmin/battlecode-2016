@@ -30,7 +30,7 @@ public class Archon extends Bot {
 					rc.move(dirToMove);
 				}
 			} else {
-				RobotType typeToBuild = scoutsBuilt++ < 2 ? RobotType.SCOUT : RobotType.TURRET;
+				RobotType typeToBuild = scoutsBuilt++ < 5 ? RobotType.SCOUT : RobotType.TURRET;
 				if (rc.hasBuildRequirements(typeToBuild)) {
 					Direction dirToBuild = Direction.EAST;
 					for (int i = 0; i < 8; i++) {
