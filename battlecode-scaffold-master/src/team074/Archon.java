@@ -1,11 +1,10 @@
-pakage team074;
+package team074;
 
 import battlecode.common.*;
 
 public class Archon extends Bot {
 	public static void run(RobotController _rc) throws GameActionException {
 		Bot.init(_rc);
-		action();
 		while(true) {
 			action();
 		}
@@ -16,5 +15,6 @@ public class Archon extends Bot {
 	}
 	private static void action() throws GameActionException {
 		// take my turn
+		Clock.yield();
 	}
 }

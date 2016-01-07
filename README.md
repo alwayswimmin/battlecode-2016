@@ -21,4 +21,5 @@ cubecow &lt;3 canmoo (#74)
 - If you get errors, you probably didn't get the Battlecode files, so do this with `ant get`
 - Update to latest release with `ant update`
 - Run locally with `ant run`
+- If duplicated directory, change all package names within directory with `sed -i '' 's/package .*/package [new-package-name];/g' *.java`
 - If this is complicated, just use Eclipse... make your life easier.

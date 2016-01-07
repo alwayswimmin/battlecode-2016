@@ -5,7 +5,6 @@ import battlecode.common.*;
 public class Viper extends Bot {
 	public static void run(RobotController _rc) throws GameActionException {
 		Bot.init(_rc);
-		action();
 		while(true) {
 			action();
 		}
@@ -16,5 +15,6 @@ public class Viper extends Bot {
 	}
 	private static void action() throws GameActionException {
 		// take my turn
+		Clock.yield();
 	}
 }

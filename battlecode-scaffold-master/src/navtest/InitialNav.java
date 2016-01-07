@@ -2,7 +2,7 @@ package navtest;
 
 import battlecode.common.*;
 
-public class InitialNav {
+public class InitialNav extends Bot {
 	public static int broadcastRadius = 1000;
 	private static Signal[] signalQueue;
 
