@@ -25,11 +25,18 @@ public class Scout extends Bot {
 		RobotInfo[] enemiesWithinRange = rc.senseNearbyRobots(SIGHT_RANGE, enemyTeam);
 		RobotInfo[] zombiesWithinRange = rc.senseNearbyRobots(SIGHT_RANGE, Team.ZOMBIE);
 
+		boolean denFound = false;
+
 		for(int i = zombiesWithinRange.length; --i >= 0; ) {
 			if(robotsEncountered[zombiesWithinRange[i].ID] == null && zombiesWithinRange[i].type == RobotType.ZOMBIEDEN) {
 				robotsEncountered[zombiesWithinRange[i].ID] = zombiesWithinRange[i].type;
 				Radio.broadcastDenLocation(zombiesWithinRange[i].location, 1000);
+				denFound = true;
 			}
+		}
+
+		if(!denFound) {
+			Radio.broadcastMoveLocation(myLocation, 1000);
 		}
 
 		if(rc.isCoreReady()) {
