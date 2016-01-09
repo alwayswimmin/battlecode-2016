@@ -35,8 +35,8 @@ public class Scout extends Bot {
 			}
 		}
 
-		if(!denFound) {
-			Radio.broadcastMoveLocation(myLocation, 1000);
+		if(!denFound && enemiesWithinRange.length != 0) {
+			Radio.broadcastMoveLocation(enemiesWithinRange[0].location, 1000);
 		}
 
 		if(rc.isCoreReady()) {
