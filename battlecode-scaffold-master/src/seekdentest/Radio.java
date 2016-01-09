@@ -10,9 +10,9 @@ import java.util.*;
 // 2: zombie den encountered
 // 3: neutral encountered
 // 4: parts encountered
-// 5: light assault (harass)
-// 6: heavy assault (with turrets)
-// 7: move camp
+// 5: move camp
+// 6: move order
+// 7: defend order
 // ...
 // 31: unit-specific move order
 
@@ -61,6 +61,10 @@ public class Radio extends Bot {
 		}
 	}
 
+	public static void clear() throws GameActionException {
+		init();
+	}
+
 	public static void broadcastDenLocation(MapLocation denLocation, int radius) throws GameActionException {
 		broadcast(2, denLocation.x + 16000, denLocation.y + 16000, radius);
 	}
@@ -73,4 +77,27 @@ public class Radio extends Bot {
 		return new MapLocation(signal.message1 - 16000, signal.message2 - 16000);
 	}
 
+	public static void broadcastMoveLocation(MapLocation dest, int radius) throws GameActionException {
+		broadcast(6, dest.x + 16000, dest.y + 16000, radius);
+	}
+
+	public static MapLocation getMoveLocation() throws GameActionException {
+		if(channelQueue[6].isEmpty()) {
+			return null;
+		}
+		MySignal signal = channelQueue[6].remove();
+		return new MapLocation(signal.message1 - 16000, signal.message2 - 16000);
+	}
+
+	public static void broadcastDefendLocation(MapLocation dest, int radius) throws GameActionException {
+		broadcast(7, dest.x + 16000, dest.y + 16000, radius);
+	}
+
+	public static MapLocation getDefendLocation() throws GameActionException {
+		if(channelQueue[7].isEmpty()) {
+			return null;
+		}
+		MySignal signal = channelQueue[7].remove();
+		return new MapLocation(signal.message1 - 16000, signal.message2 - 16000);
+	}
 }

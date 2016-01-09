@@ -29,22 +29,13 @@ public class Scout extends Bot {
 			if(robotsEncountered[zombiesWithinRange[i].ID] == null && zombiesWithinRange[i].type == RobotType.ZOMBIEDEN) {
 				robotsEncountered[zombiesWithinRange[i].ID] = zombiesWithinRange[i].type;
 				Radio.broadcastDenLocation(zombiesWithinRange[i].location, 1000);
-				System.out.println("DEN ENCOUNTERED!!!");
 			}
 		}
 
 		if(rc.isCoreReady()) {
 			Direction[] directions = {Direction.NORTH, Direction.NORTH_EAST, Direction.EAST, Direction.SOUTH_EAST, Direction.SOUTH, Direction.SOUTH_WEST, Direction.WEST, Direction.NORTH_WEST};
 			Direction dirToMove = directions[(int) (Math.random() * 8)];
-			// Check the rubble in that direction
-			if (rc.senseRubble(rc.getLocation().add(dirToMove)) >= GameConstants.RUBBLE_OBSTRUCTION_THRESH) {
-				// Too much rubble, so I should clear it
-				rc.clearRubble(dirToMove);
-				// Check if I can move in this direction
-			} else if (rc.canMove(dirToMove)) {
-				// Move
-				rc.move(dirToMove);
-			}
+			Nav.goTo(myLocation.add(dirToMove), new SPAll(rc.senseHostileRobots(myLocation, SIGHT_RANGE)));
 		}
 		Clock.yield();
 	}
