@@ -49,7 +49,6 @@ public class Archon extends Bot {
 
 		if (rc.isCoreReady()) {
 			// Nav.goTo(personalHQ); // no avoid yet...
-<<<<<<< HEAD
 			RobotType typeToBuild = (scoutsBuilt < 2 ? RobotType.SCOUT : RobotType.SOLDIER);
 
 			if (ct > 1 && (ct%5 == 0)) {
@@ -58,9 +57,7 @@ public class Archon extends Bot {
 
 			boolean y = false;
 
-=======
 			RobotType typeToBuild = scoutsBuilt++ < 1 ? RobotType.SCOUT : RobotType.SOLDIER;
->>>>>>> 0abcc9554aacbd8bc7337e4f55ee70c37d41b504
 			if (rc.hasBuildRequirements(typeToBuild)) {
 
 				Direction dirToBuild = Direction.EAST;
