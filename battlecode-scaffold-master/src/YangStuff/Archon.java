@@ -3,7 +3,8 @@ package seekdentest;
 import battlecode.common.*;
 import java.util.Random;
 
-public class Archon extends Bot {
+// public class Archon extends Bot {
+class YangArchon extends Bot {
 	private static final int SIGHT_RANGE = 35;
 	private static int scoutsBuilt = 0;
 	private static int ct = 0;
@@ -30,6 +31,7 @@ public class Archon extends Bot {
 	}
 
 	private static void action() throws GameActionException {
+	/*
 		// take my turn
 		turn = turn*x%mod;
 		myLocation = rc.getLocation();
@@ -104,7 +106,7 @@ public class Archon extends Bot {
 				}
 			}
 		}
-
+*/
 		Clock.yield();
 	}
 }

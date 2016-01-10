@@ -24,5 +24,7 @@ public class Bot {
         enemyTeam = myTeam.opponent();
 
         myLocation = rc.getLocation();
+
+		Radio.init();
     }
 }

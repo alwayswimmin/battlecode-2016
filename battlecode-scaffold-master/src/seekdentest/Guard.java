@@ -23,20 +23,20 @@ public class Guard extends Bot {
 		// take my turn
 		myLocation = rc.getLocation();
 		boolean shouldAttack = false;	
-		if (ATTACK_RANGE > 0) {
 			RobotInfo[] enemiesWithinRange = rc.senseNearbyRobots(ATTACK_RANGE, enemyTeam);
 			RobotInfo[] zombiesWithinRange = rc.senseNearbyRobots(ATTACK_RANGE, Team.ZOMBIE);
-			if (enemiesWithinRange.length > 0) {
-				shouldAttack = true;
-				// Check if weapon is ready
-				if (rc.isWeaponReady()) {
-					rc.attackLocation(enemiesWithinRange[0].location);
-				}
-			} else if (zombiesWithinRange.length > 0) {
+		if (ATTACK_RANGE > 0) {
+			if (zombiesWithinRange.length > 0) {
 				shouldAttack = true;
 				// Check if weapon is ready
 				if (rc.isWeaponReady()) {
 					rc.attackLocation(zombiesWithinRange[0].location);
+				}
+			} else if (enemiesWithinRange.length > 0) {
+				shouldAttack = true;
+				// Check if weapon is ready
+				if (rc.isWeaponReady()) {
+					rc.attackLocation(enemiesWithinRange[0].location);
 				}
 			}
 		}
