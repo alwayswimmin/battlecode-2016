@@ -36,24 +36,22 @@ class SPAll extends Bot implements SafetyPolicy {
 public class Nav extends Bot {
 
 	private static MapLocation dest;
-	private static MapLocation startBug;
+	private static MapLocation start;
 	private static SafetyPolicy policy;
 	private static boolean obsFlag; // true means obstacle detected, false otherwise
 	private static boolean wallOnRight; // true means wall on right hand side in bug
-	private static boolean bugFailed;
 	
 	private static Direction toDest;
 	private static Direction dir;
 
 	private static void init(MapLocation _dest, SafetyPolicy _policy) throws GameActionException {
 		dest = _dest;
-		startBug = myLocation;
+		start = myLocation;
 		policy = _policy;
 		obsFlag = false;
 		wallOnRight = true;
         toDest = myLocation.directionTo(dest);
 		dir = toDest;
-		bugFailed = false;
 	}
 
     private static boolean move(Direction dir) throws GameActionException {
@@ -150,7 +148,6 @@ public class Nav extends Bot {
 		if(!tryMoveDirect()) {
 			if(!obsFlag) {
 				chooseWallDirection();
-				startBug = myLocation;
 			}
 			obsFlag = true;
 			followBoundary();
