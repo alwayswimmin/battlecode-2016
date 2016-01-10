@@ -23,9 +23,9 @@ public class Soldier extends Bot {
 		// take my turn
 		myLocation = rc.getLocation();
 		boolean shouldAttack = false;	
-		if (ATTACK_RANGE > 0) {
 			RobotInfo[] enemiesWithinRange = rc.senseNearbyRobots(ATTACK_RANGE, enemyTeam);
 			RobotInfo[] zombiesWithinRange = rc.senseNearbyRobots(ATTACK_RANGE, Team.ZOMBIE);
+		if (ATTACK_RANGE > 0) {
 			if (enemiesWithinRange.length > 0) {
 				shouldAttack = true;
 				// Check if weapon is ready

@@ -22,4 +22,5 @@ cubecow &lt;3 canmoo (#74)
 - Update to latest release with `ant update`
 - Run locally with `ant run`
 - If duplicated directory, change all package names within directory with `sed -i '' 's/package .*/package [new-package-name];/g' *.java`
+- Create jar with `ant -Dteam=team074 jar`
 - If this is complicated, just use Eclipse... make your life easier.
