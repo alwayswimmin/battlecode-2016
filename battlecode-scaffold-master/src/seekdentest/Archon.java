@@ -3,7 +3,6 @@ package seekdentest;
 import battlecode.common.*;
 
 public class Archon extends Bot {
-	private static final int SIGHT_RANGE = 35;
 	private static int scoutsBuilt = 0;
 
 	public static void run(RobotController _rc) throws GameActionException {
@@ -20,7 +19,10 @@ public class Archon extends Bot {
 		personalHQ = rc.getLocation();
 	}
 
-	private static MapLocation denLocation = null;
+	private static IdAndMapLocation den = null;
+
+	private static int turnsSinceEnemySeen = 100;
+
 	private static void action() throws GameActionException {
 		// take my turn
 		myLocation = rc.getLocation();
@@ -31,18 +33,25 @@ public class Archon extends Bot {
 		MapLocation enemycenter = null;
 
 		if(hostileWithinRange.length != 0) {
+			if(turnsSinceEnemySeen > 5) {
 			Radio.broadcastDefendLocation(myLocation, 1000);
+			}
+			turnsSinceEnemySeen = 0;
 			for(int i = hostileWithinRange.length; --i >= 0; ) {
 				enemycenterx += hostileWithinRange[i].location.x;
 				enemycentery += hostileWithinRange[i].location.y;
 			}
 			enemycenter = new MapLocation((int) (enemycenterx / hostileWithinRange.length + (enemycenterx > 0 ? 1 : -1)), (int) (enemycentery / hostileWithinRange.length + (enemycentery > 0 ? 1 : -1)));
 		} else {
+			turnsSinceEnemySeen++;
+			if(turnsSinceEnemySeen == 15) {
+				Radio.broadcastClearDefend(1000);
+			}
 
-			denLocation = Radio.getDenLocation();
+			den = Radio.getDenLocation();
 
-			if(denLocation != null) {
-				Radio.broadcastMoveLocation(denLocation, 1000);
+			if(den != null) {
+				Radio.broadcastMoveLocation(den.location, 1000);
 			}
 		}
 
@@ -54,17 +63,15 @@ public class Archon extends Bot {
 			} else if (rc.hasBuildRequirements(typeToBuild)) {
 					Direction dirToBuild = Direction.EAST;
 					for (int i = 0; i < 8; i++) {
-						// If possible, build in this direction
 						if (rc.canBuild(dirToBuild, typeToBuild)) {
 							rc.build(dirToBuild, typeToBuild);
 							break;
 						} else {
-							// Rotate the direction to try
 							dirToBuild = dirToBuild.rotateLeft();
 						}
 					}
-			} else if (denLocation != null) {
-				Nav.goTo(denLocation);
+			} else if (den != null) {
+				Nav.goTo(den.location);
 			}
 		}
 

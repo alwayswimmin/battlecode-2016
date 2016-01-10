@@ -159,4 +159,15 @@ public class Nav extends Bot {
 	public static void goTo(MapLocation _dest) throws GameActionException {
 		goTo(_dest, new SPNone());
 	}
+
+	public static MapLocation closestWall() throws GameActionException {
+		MapLocation[] visibleLocations = MapLocation.getAllMapLocationsWithinRadiusSq(myLocation, SIGHT_RANGE);
+		MapLocation toReturn = null;
+		for(int i = visibleLocations.length; --i >= 0; ) {
+			if(rc.onTheMap(visibleLocations[i]) && (toReturn == null || myLocation.distanceSquaredTo(visibleLocations[i]) < myLocation.distanceSquaredTo(toReturn))) {
+				toReturn = visibleLocations[i];
+			}
+		}
+		return toReturn;
+	}
 }
