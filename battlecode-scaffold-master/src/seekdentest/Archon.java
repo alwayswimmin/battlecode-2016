@@ -19,6 +19,10 @@ public class Archon extends Bot {
 		personalHQ = rc.getLocation();
 	}
 
+	private static double distanceBetween(MapLocation a, MapLocation b) {
+		return (a.x-b.x)*(a.x-b.x)+(a.y-b.y)*(a.y-b.y);
+	}
+
 	private static IdAndMapLocation den = null;
 
 	private static int turnsSinceEnemySeen = 100;
@@ -28,6 +32,15 @@ public class Archon extends Bot {
 		myLocation = rc.getLocation();
 
 		RobotInfo[] hostileWithinRange = rc.senseHostileRobots(myLocation, SIGHT_RANGE);
+		RobotInfo[] neutralWithinRange = rc.senseNearbyRobots(SIGHT_RANGE, Team.NEUTRAL);
+		RobotInfo[] friendWithinRange = rc.senseNearbyRobots(SIGHT_RANGE, rc.getTeam());
+
+		for (int i = 0; i < friendWithinRange.length; ++i) {
+			if (friendWithinRange[i].health != friendWithinRange[i].maxHealth && 
+				(friendWithinRange[i].type.attackRadiusSquared > distanceBetween(rc.getLocation(), friendWithinRange[i].location))) {
+				rc.repair(friendWithinRange[i].location); break;
+			}
+		}
 
 		double enemycenterx = 0, enemycentery = 0;
 		MapLocation enemycenter = null;
@@ -55,9 +68,12 @@ public class Archon extends Bot {
 			}
 		}
 
-				RobotType typeToBuild = scoutsBuilt++ < 1 ? RobotType.SCOUT : (Math.random() > 0.5 ? RobotType.SOLDIER : RobotType.GUARD);
+		RobotType typeToBuild = scoutsBuilt++ < 1 ? RobotType.SCOUT : (Math.random() > 0.5 ? RobotType.SOLDIER : RobotType.GUARD);
+
 		if (rc.isCoreReady()) {
-			if(enemycenter != null && !enemycenter.equals(myLocation)) {
+			if (neutralWithinRange.length > 0) {
+				rc.activate(neutralWithinRange[0].location);
+			} else if(enemycenter != null && !enemycenter.equals(myLocation)) {
 				MapLocation dest = new MapLocation(4 * myLocation.x - 3 * enemycenter.x, 4 * myLocation.y - 3 * enemycenter.y);
 				Nav.goTo(dest, new SPAll(hostileWithinRange));
 			} else if (rc.hasBuildRequirements(typeToBuild)) {

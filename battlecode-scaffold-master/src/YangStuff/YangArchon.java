@@ -1,4 +1,4 @@
-package seekdentest;
+package YangStuff;
 
 import battlecode.common.*;
 import java.util.Random;
