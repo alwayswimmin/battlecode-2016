@@ -1,4 +1,4 @@
-package YangStuff;
+package team074;
 
 import battlecode.common.*;
 import java.util.*;
@@ -13,6 +13,7 @@ import java.util.*;
 // 5: move camp
 // 6: move order
 // 7: defend order
+// 8: clear defend order
 // ...
 // 31: unit-specific move order
 
@@ -26,6 +27,15 @@ class MySignal {
 		location = _location;
 		message1 = _message1;
 		message2 = _message2;
+	}
+}
+
+class IdAndMapLocation {
+	public int id;
+	public MapLocation location;
+	public IdAndMapLocation(int _id, MapLocation _location) {
+		id = _id;
+		location = _location;
 	}
 }
 
@@ -69,35 +79,47 @@ public class Radio extends Bot {
 		broadcast(2, denLocation.x + 16000, denLocation.y + 16000, radius);
 	}
 
-	public static MapLocation getDenLocation() throws GameActionException {
+	public static IdAndMapLocation getDenLocation() throws GameActionException {
 		if(channelQueue[2].isEmpty()) {
 			return null;
 		}
 		MySignal signal = channelQueue[2].remove();
-		return new MapLocation(signal.message1 - 16000, signal.message2 - 16000);
+		return new IdAndMapLocation(signal.id, new MapLocation(signal.message1 - 16000, signal.message2 - 16000));
 	}
 
 	public static void broadcastMoveLocation(MapLocation dest, int radius) throws GameActionException {
 		broadcast(6, dest.x + 16000, dest.y + 16000, radius);
 	}
 
-	public static MapLocation getMoveLocation() throws GameActionException {
+	public static IdAndMapLocation getMoveLocation() throws GameActionException {
 		if(channelQueue[6].isEmpty()) {
 			return null;
 		}
 		MySignal signal = channelQueue[6].remove();
-		return new MapLocation(signal.message1 - 16000, signal.message2 - 16000);
+		return new IdAndMapLocation(signal.id, new MapLocation(signal.message1 - 16000, signal.message2 - 16000));
 	}
 
 	public static void broadcastDefendLocation(MapLocation dest, int radius) throws GameActionException {
 		broadcast(7, dest.x + 16000, dest.y + 16000, radius);
 	}
 
-	public static MapLocation getDefendLocation() throws GameActionException {
+	public static IdAndMapLocation getDefendLocation() throws GameActionException {
 		if(channelQueue[7].isEmpty()) {
 			return null;
 		}
 		MySignal signal = channelQueue[7].remove();
-		return new MapLocation(signal.message1 - 16000, signal.message2 - 16000);
+		return new IdAndMapLocation(signal.id, new MapLocation(signal.message1 - 16000, signal.message2 - 16000));
+	}
+
+	public static void broadcastClearDefend(int radius) throws GameActionException {
+		broadcast(8, 0, 0, radius);
+	}
+
+	public static int getClearDefend() throws GameActionException {
+		if(channelQueue[8].isEmpty()) {
+			return -1;
+		}
+		MySignal signal = channelQueue[8].remove();
+		return signal.id;
 	}
 }

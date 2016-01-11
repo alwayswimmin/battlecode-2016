@@ -4,7 +4,7 @@ import battlecode.common.*;
 import java.util.Random;
 
 // public class Archon extends Bot {
-class YangArchon extends Bot {
+class Archon extends Bot {
 	private static final int SIGHT_RANGE = 35;
 	private static int scoutsBuilt = 0;
 	private static int ct = 0;

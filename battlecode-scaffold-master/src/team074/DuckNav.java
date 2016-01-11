@@ -1,4 +1,4 @@
-package YangStuff;
+package team074;
 
 // largely taken from https://github.com/TheDuck314/battlecode2015/blob/master/teams/zephyr26_final/Nav.java
 // will likely replace with own bugging and other nav later.
