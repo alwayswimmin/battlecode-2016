@@ -70,7 +70,7 @@ public class Nav extends Bot {
             return true;
         }
 
-        if (rc.senseRubble(rc.getLocation().add(toDest)) > 0) {
+        if (rc.senseRubble(rc.getLocation().add(toDest)) >= 50) {
         	MapLocation locAfterMove = rc.getLocation().add(toDest);
         	Direction[] nextMoves = {toDest.rotateLeft(), toDest, toDest.rotateRight()};
 
@@ -78,9 +78,9 @@ public class Nav extends Bot {
 
         	for (int i = 0; i < 3; ++i)
         		for (int j = 0; j < 3; ++j) {
-        			if (rc.senseRubble(locAfterMove.add(nextMoves[i])) == 0 && rc.onTheMap(locAfterMove.add(nextMoves[i])))
+        			if (rc.senseRubble(locAfterMove.add(nextMoves[i])) < 50 && rc.onTheMap(locAfterMove.add(nextMoves[i])))
         				y = true;
-        			if (rc.senseRubble(locAfterMove.add(nextMoves[i]).add(nextMoves[j])) == 0 && rc.onTheMap(locAfterMove.add(nextMoves[i]).add(nextMoves[j])))
+        			if (rc.senseRubble(locAfterMove.add(nextMoves[i]).add(nextMoves[j])) < 50 && rc.onTheMap(locAfterMove.add(nextMoves[i]).add(nextMoves[j])))
         				y = true;
         		}
 
