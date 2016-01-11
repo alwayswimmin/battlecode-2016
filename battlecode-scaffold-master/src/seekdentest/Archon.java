@@ -76,7 +76,7 @@ public class Archon extends Bot {
 			}
 		}
 
-		RobotType typeToBuild = scoutsBuilt++ < 1 ? RobotType.SCOUT : (Math.random() > 0.5 ? RobotType.SOLDIER : RobotType.GUARD);
+		RobotType typeToBuild = scoutsBuilt++ < 1 ? RobotType.SCOUT : (Math.random() >= 0.3 ? RobotType.SOLDIER : RobotType.GUARD);
 
 		if (rc.isCoreReady()) {
 			if (canActivate > -1) {
@@ -96,6 +96,21 @@ public class Archon extends Bot {
 					}
 			} else if (den != null) {
 				Nav.goTo(den.location);
+			}
+		}
+
+		if (rc.isCoreReady()) {
+			int rot = (int)(Math.random() * 8);
+			Direction dirToMove = Direction.EAST;
+			for (int i = 0; i < rot; ++i)
+				dirToMove = dirToMove.rotateLeft();
+
+			for (int i = 0; i < 8; ++i) {
+				if (rc.canMove(dirToMove)) {
+					rc.move(dirToMove); break;
+				}
+
+				dirToMove = dirToMove.rotateLeft();
 			}
 		}
 

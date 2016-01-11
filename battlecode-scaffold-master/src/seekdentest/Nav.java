@@ -64,11 +64,30 @@ public class Nav extends Bot {
     }
 	// move directly or 45 degrees off. return true if worked.
     private static boolean tryMoveDirect() throws GameActionException {
-
         if (canMove(toDest)) {
             move(toDest);
 			dir = toDest;
             return true;
+        }
+
+        if (rc.senseRubble(rc.getLocation().add(toDest)) > 0) {
+        	MapLocation locAfterMove = rc.getLocation().add(toDest);
+        	Direction[] nextMoves = {toDest.rotateLeft(), toDest, toDest.rotateRight()};
+
+        	boolean y = false;
+
+        	for (int i = 0; i < 3; ++i)
+        		for (int j = 0; j < 3; ++j) {
+        			if (rc.senseRubble(locAfterMove.add(nextMoves[i])) == 0 && rc.onTheMap(locAfterMove.add(nextMoves[i])))
+        				y = true;
+        			if (rc.senseRubble(locAfterMove.add(nextMoves[i]).add(nextMoves[j])) == 0 && rc.onTheMap(locAfterMove.add(nextMoves[i]).add(nextMoves[j])))
+        				y = true;
+        		}
+
+        	if (y == true && rc.onTheMap(rc.getLocation().add(toDest))) {
+        		rc.clearRubble(toDest);
+        		return true;
+        	}
         }
 /*
         Direction dirLeft = toDest.rotateLeft();
