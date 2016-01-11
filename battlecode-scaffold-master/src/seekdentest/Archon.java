@@ -36,7 +36,7 @@ public class Archon extends Bot {
 		RobotInfo[] friendWithinRange = rc.senseNearbyRobots(SIGHT_RANGE, rc.getTeam());
 
 		for (int i = 0; i < friendWithinRange.length; ++i) {
-			if (friendWithinRange[i].health != friendWithinRange[i].maxHealth && 
+			if (friendWithinRange[i].health != friendWithinRange[i].maxHealth && friendWithinRange[i].type != RobotType.ARCHON&& 
 				(friendWithinRange[i].type.attackRadiusSquared > distanceBetween(rc.getLocation(), friendWithinRange[i].location))) {
 				rc.repair(friendWithinRange[i].location); break;
 			}

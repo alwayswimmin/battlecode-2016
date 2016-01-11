@@ -1,4 +1,4 @@
-package seekdentest;
+package YangStuff;
 
 // inspired by https://github.com/TheDuck314/battlecode2015/blob/master/teams/zephyr26_final/Bot.java
 
