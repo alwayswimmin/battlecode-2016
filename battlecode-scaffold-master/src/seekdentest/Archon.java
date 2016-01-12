@@ -11,6 +11,8 @@ public class Archon extends Bot {
 		while(true) {
 			Radio.process();
 			action();
+			Radio.clear();
+			Clock.yield();
 		}
 	}
 
@@ -27,9 +29,29 @@ public class Archon extends Bot {
 
 	private static int turnsSinceEnemySeen = 100;
 
+
+	private static RobotType[] robotTypes = {
+			RobotType.ARCHON,
+			RobotType.GUARD,
+			RobotType.SCOUT,
+			RobotType.SOLDIER,
+			RobotType.TURRET,
+			RobotType.VIPER
+			};
+	// 0: ARCHON
+	// 1: GUARD
+	// 2: SCOUT
+	// 3: SOLDIER
+	// 4: TURRET/TTM
+	// 5: VIPER
+	private static int[] unitsOfTypeBuilt = {1, 0, 0, 0, 0, 0};
+	// includes activation.
+
 	private static void action() throws GameActionException {
 		// take my turn
 		myLocation = rc.getLocation();
+
+		processSignals();
 
 		RobotInfo[] hostileWithinRange = rc.senseHostileRobots(myLocation, SIGHT_RANGE);
 		RobotInfo[] neutralWithinRange = rc.senseNearbyRobots(SIGHT_RANGE, Team.NEUTRAL);
@@ -37,8 +59,8 @@ public class Archon extends Bot {
 
 		for (int i = 0; i < friendWithinRange.length; ++i) {
 			if (friendWithinRange[i].health != friendWithinRange[i].maxHealth && 
-			(friendWithinRange[i].type.attackRadiusSquared > distanceBetween(rc.getLocation(), friendWithinRange[i].location)) 
-			&& (friendWithinRange[i].type != RobotType.ARCHON)) {
+					(friendWithinRange[i].type.attackRadiusSquared > distanceBetween(rc.getLocation(), friendWithinRange[i].location)) 
+					&& (friendWithinRange[i].type != RobotType.ARCHON)) {
 				rc.repair(friendWithinRange[i].location); break;
 			}
 		}
@@ -55,7 +77,7 @@ public class Archon extends Bot {
 
 		if(hostileWithinRange.length != 0) {
 			if(turnsSinceEnemySeen > 5) {
-			Radio.broadcastDefendLocation(myLocation, 1000);
+				Radio.broadcastDefendLocation(myLocation, 1000);
 			}
 			turnsSinceEnemySeen = 0;
 			for(int i = hostileWithinRange.length; --i >= 0; ) {
@@ -76,29 +98,115 @@ public class Archon extends Bot {
 			}
 		}
 
-		RobotType typeToBuild = scoutsBuilt++ < 1 ? RobotType.SCOUT : (Math.random() > 0.5 ? RobotType.SOLDIER : RobotType.GUARD);
+		int typeToBuild = scoutsBuilt++ < 1 ? 2 : (Math.random() > 0.2 ? 3 : 1);
+		// 0: ARCHON
+		// 1: GUARD
+		// 2: SCOUT
+		// 3: SOLDIER
+		// 4: TURRET/TTM
+		// 5: VIPER
 
+		boolean addedRobot = false;
 		if (rc.isCoreReady()) {
 			if (canActivate > -1) {
 				rc.activate(neutralWithinRange[canActivate].location);
+				switch(neutralWithinRange[canActivate].type) {
+					case ARCHON:
+						typeToBuild = 0;
+						break;
+					case GUARD:
+						typeToBuild = 1;
+						break;
+					case SCOUT:
+						typeToBuild = 2;
+						break;
+					case SOLDIER:
+						typeToBuild = 3;
+						break;
+					case TURRET:
+					case TTM:
+						typeToBuild = 4;
+						break;
+					case VIPER:
+						typeToBuild = 5;
+						break;
+					default:
+						break;
+				}
+				unitsOfTypeBuilt[typeToBuild]++;
+				addedRobot = true;
 			} else if(enemycenter != null && !enemycenter.equals(myLocation)) {
 				MapLocation dest = new MapLocation(4 * myLocation.x - 3 * enemycenter.x, 4 * myLocation.y - 3 * enemycenter.y);
 				Nav.goTo(dest, new SPAll(hostileWithinRange));
-			} else if (rc.hasBuildRequirements(typeToBuild)) {
-					Direction dirToBuild = Direction.EAST;
-					for (int i = 0; i < 8; i++) {
-						if (rc.canBuild(dirToBuild, typeToBuild)) {
-							rc.build(dirToBuild, typeToBuild);
-							break;
-						} else {
-							dirToBuild = dirToBuild.rotateLeft();
-						}
+			} else if (rc.hasBuildRequirements(robotTypes[typeToBuild])) {
+				Direction dirToBuild = Direction.EAST;
+				for (int i = 0; i < 8; i++) {
+					if (rc.canBuild(dirToBuild, robotTypes[typeToBuild])) {
+						rc.build(dirToBuild, robotTypes[typeToBuild]);
+						unitsOfTypeBuilt[typeToBuild]++;
+						addedRobot = true;
+						break;
+					} else {
+						dirToBuild = dirToBuild.rotateLeft();
 					}
+				}
 			} else if (den != null) {
 				Nav.goTo(den.location);
 			}
 		}
+	}
 
-		Clock.yield();
+	private static void processSignals() throws GameActionException {
+		int strategyRequest = Radio.getInitialStrategyRequest();
+		while(strategyRequest != -1) {
+			Radio.broadcastTuneCommand(strategyRequest, 30, 6);
+			if(!rc.canSenseRobot(strategyRequest)) {
+				strategyRequest = Radio.getInitialStrategyRequest();
+				continue;
+			}
+			RobotInfo requestingRobot = rc.senseRobot(strategyRequest);
+			int requestingRobotTypeInt = 0;
+				switch(requestingRobot.type) {
+					case ARCHON:
+						requestingRobotTypeInt = 0;
+						break;
+					case GUARD:
+						requestingRobotTypeInt = 1;
+						break;
+					case SCOUT:
+						requestingRobotTypeInt = 2;
+						break;
+					case SOLDIER:
+						requestingRobotTypeInt = 3;
+						break;
+					case TURRET:
+					case TTM:
+						requestingRobotTypeInt = 4;
+						break;
+					case VIPER:
+						requestingRobotTypeInt = 5;
+						break;
+					default:
+						break;
+				}
+			Radio.broadcastStrategyAssignment(determineStrategy(requestingRobotTypeInt), 10);
+			strategyRequest = Radio.getInitialStrategyRequest();
+		}
+	}
+
+	private static int determineStrategy(int robotType) throws GameActionException {
+		switch(robotType) {
+			case 0:
+			case 1:
+				return unitsOfTypeBuilt[robotType] % 2; // 0 defend, 1 attack
+			case 2:
+				return 100;
+			case 3:
+				return unitsOfTypeBuilt[robotType] % 2; // 0 defend, 1 attack
+			case 4:
+			case 5:
+			default:
+				return 100;
+		}
 	}
 }

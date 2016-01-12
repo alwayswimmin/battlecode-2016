@@ -20,7 +20,9 @@ public class Soldier extends Bot {
 		personalHQ = rc.getLocation();
 		defendQueue = new LinkedList<Integer>();
 		moveQueue = new LinkedList<MapLocation>();
+		Radio.broadcastInitialStrategyRequest(10);
 	}
+
 	private static MapLocation defendLocation = null;
 	private static MapLocation attackLocation = null;
 	private static void action() throws GameActionException {
@@ -39,7 +41,21 @@ public class Soldier extends Bot {
 				rc.attackLocation(zombiesWithinRange[0].location);
 			}
 		}
-		moveSomewhere();
+		switch(strategy) {
+			case -1:
+				int channel = Radio.getTuneCommand();
+				if(channel == 30) {
+					strategy = Radio.getStrategyAssignment();
+				}
+				break;
+			case 0:
+				break;
+			case 1:
+				moveSomewhere();
+				break;
+			default:
+				break;
+		}
 	}
 
 	private static LinkedList<Integer> defendQueue;

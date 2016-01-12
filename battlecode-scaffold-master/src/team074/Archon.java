@@ -37,9 +37,17 @@ public class Archon extends Bot {
 
 		for (int i = 0; i < friendWithinRange.length; ++i) {
 			if (friendWithinRange[i].health != friendWithinRange[i].maxHealth && 
-				(friendWithinRange[i].type.attackRadiusSquared > distanceBetween(rc.getLocation(), friendWithinRange[i].location))) {
+			(friendWithinRange[i].type.attackRadiusSquared > distanceBetween(rc.getLocation(), friendWithinRange[i].location)) 
+			&& (friendWithinRange[i].type != RobotType.ARCHON)) {
 				rc.repair(friendWithinRange[i].location); break;
 			}
+		}
+
+		int canActivate = -1;
+
+		for (int i = 0; i < neutralWithinRange.length; ++i) {
+			if (distanceBetween(rc.getLocation(), neutralWithinRange[i].location) < 3)
+				canActivate = i;
 		}
 
 		double enemycenterx = 0, enemycentery = 0;
@@ -71,8 +79,8 @@ public class Archon extends Bot {
 		RobotType typeToBuild = scoutsBuilt++ < 1 ? RobotType.SCOUT : (Math.random() > 0.5 ? RobotType.SOLDIER : RobotType.GUARD);
 
 		if (rc.isCoreReady()) {
-			if (neutralWithinRange.length > 0) {
-				rc.activate(neutralWithinRange[0].location);
+			if (canActivate > -1) {
+				rc.activate(neutralWithinRange[canActivate].location);
 			} else if(enemycenter != null && !enemycenter.equals(myLocation)) {
 				MapLocation dest = new MapLocation(4 * myLocation.x - 3 * enemycenter.x, 4 * myLocation.y - 3 * enemycenter.y);
 				Nav.goTo(dest, new SPAll(hostileWithinRange));

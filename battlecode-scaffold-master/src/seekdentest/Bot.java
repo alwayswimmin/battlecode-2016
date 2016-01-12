@@ -14,6 +14,7 @@ public class Bot {
 			// NOT set upon init.
 			// basically where you should gather if not on a mission,
 			// for example, archon that made you.
+	protected static int strategy;
 	
 	// treat these as final even though they aren't really
 	public static RobotType TYPE;
@@ -28,6 +29,7 @@ public class Bot {
 
         myTeam = rc.getTeam();
         enemyTeam = myTeam.opponent();
+		strategy = -1;
 
         myLocation = rc.getLocation();
 
