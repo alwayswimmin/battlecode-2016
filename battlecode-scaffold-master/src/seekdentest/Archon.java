@@ -189,7 +189,7 @@ public class Archon extends Bot {
 
 			for (int i = 0; i < 8; ++i) {
 				if (rc.canMove(dirToMove)) {
-					rc.move(dirToMove); break;
+					Nav.goTo(myLocation.add(dirToMove)); break;
 				}
 
 				dirToMove = dirToMove.rotateLeft();

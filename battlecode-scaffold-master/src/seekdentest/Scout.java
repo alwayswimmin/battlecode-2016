@@ -6,7 +6,6 @@ import java.util.Random;
 import java.util.LinkedList;
 
 public class Scout extends Bot {
-	private static final int SIGHT_RANGE = 53;
 	private static RobotType[] robotsEncountered = new RobotType[32001];
 	private static Direction[] directions = {Direction.NORTH, Direction.NORTH_EAST, Direction.EAST, Direction.SOUTH_EAST, Direction.SOUTH, Direction.SOUTH_WEST, Direction.WEST, Direction.NORTH_WEST};
 	private static Random rand;
@@ -30,14 +29,22 @@ public class Scout extends Bot {
 		personalHQ = rc.getLocation();
 		locationsPastFewTurns = new LinkedList<MapLocation>();
 	}
+
+	private static RobotInfo[]   friendsWithinRange;
+	private static RobotInfo[]   enemiesWithinRange;
+	private static RobotInfo[]   zombiesWithinRange;
+	private static RobotInfo[]   neutralsWithinRange;
+	private static MapLocation[] partsWithinRange;
+
 	private static void action() throws GameActionException {
 		// take my turn
 		myLocation = rc.getLocation();
 
-		RobotInfo[] enemiesWithinRange = rc.senseNearbyRobots(SIGHT_RANGE, enemyTeam);
-		RobotInfo[] zombiesWithinRange = rc.senseNearbyRobots(SIGHT_RANGE, Team.ZOMBIE);
-		RobotInfo[] neutralsWithinRange = rc.senseNearbyRobots(SIGHT_RANGE, Team.NEUTRAL);
-		MapLocation[] partsWithinRange = rc.sensePartLocations(SIGHT_RANGE);
+		friendsWithinRange = rc.senseNearbyRobots(SIGHT_RANGE, myTeam);
+		enemiesWithinRange = rc.senseNearbyRobots(SIGHT_RANGE, enemyTeam);
+        zombiesWithinRange = rc.senseNearbyRobots(SIGHT_RANGE, Team.ZOMBIE);
+        neutralsWithinRange = rc.senseNearbyRobots(SIGHT_RANGE, Team.NEUTRAL);
+        partsWithinRange = rc.sensePartLocations(SIGHT_RANGE);						
 
 		int broadcastCount = 0;
 		int cooldownPartsBroadcast = 100;
@@ -75,6 +82,8 @@ public class Scout extends Bot {
 			++broadcastCount;
 		}
 
+		instructTurret();
+
 		for(int i = 8; --i >= 0; ) {
 			if(rc.isCoreReady()) {
 				Nav.goTo(myLocation.add(dirToMove).add(dirToMove), new SPAll(rc.senseHostileRobots(myLocation, SIGHT_RANGE)));
@@ -97,6 +106,41 @@ public class Scout extends Bot {
 			MapLocation whereIWas = locationsPastFewTurns.remove();
 			if(whereIWas.distanceSquaredTo(myLocation) < 5) {
 				dirToMove = directions[rand.nextInt(1000) % 8];
+			}
+		}
+	}
+
+	private static void instructTurret() throws GameActionException {
+		// maximum broadcast 3 times
+		int instructionCount = 0;
+		for(int i = enemiesWithinRange.length; --i >= 0; ) {
+			for(int j = friendsWithinRange.length; --j >= 0; ) {
+				if(friendsWithinRange[j].type == RobotType.TURRET || friendsWithinRange[j].type == RobotType.TTM) {
+					int dist = enemiesWithinRange[i].location.distanceSquaredTo(friendsWithinRange[j].location);
+					if(dist > friendsWithinRange[j].type.sensorRadiusSquared && dist <= friendsWithinRange[j].type.attackRadiusSquared) {
+						Radio.broadcastTurretAttack(enemiesWithinRange[i].location, friendsWithinRange[j].location.distanceSquaredTo(myLocation));
+						++instructionCount;
+						break;
+					}
+				}
+			}
+			if(instructionCount == 3) {
+				return;
+			}
+		}
+		for(int i = zombiesWithinRange.length; --i >= 0; ) {
+			for(int j = friendsWithinRange.length; --j >= 0; ) {
+				if(friendsWithinRange[j].type == RobotType.TURRET || friendsWithinRange[j].type == RobotType.TTM) {
+					int dist = zombiesWithinRange[i].location.distanceSquaredTo(friendsWithinRange[j].location);
+					if(dist > friendsWithinRange[j].type.sensorRadiusSquared && dist <= friendsWithinRange[j].type.attackRadiusSquared) {
+						Radio.broadcastTurretAttack(zombiesWithinRange[i].location, friendsWithinRange[j].location.distanceSquaredTo(myLocation));
+						++instructionCount;
+						break;
+					}
+				}
+			}
+			if(instructionCount == 3) {
+				return;
 			}
 		}
 	}

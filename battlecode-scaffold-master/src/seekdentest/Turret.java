@@ -36,6 +36,13 @@ public class Turret extends Bot {
 			for(RobotInfo enemyRI : visibleEnemyArray) {
 				enemyArrayList.add(enemyRI.location);
 			}
+
+			IdAndMapLocation scoutInstruction = Radio.getTurretAttack();
+			while(scoutInstruction != null) {
+				enemyArrayList.add(scoutInstruction.location);
+				scoutInstruction = Radio.getTurretAttack();
+			}
+
 			MapLocation[] enemyArray = new MapLocation[enemyArrayList.size()];
 
 			for(int i=0;i<enemyArrayList.size();i++){
