@@ -15,7 +15,9 @@ import java.util.*;
 // 7: defend order
 // 8: clear defend order
 // ...
+// 30: unit-specific strategy assignment
 // 31: unit-specific move order
+// 32: no message
 
 class MySignal {
 	public int id;
@@ -52,7 +54,8 @@ public class Radio extends Bot {
 	}
 	// five bits for channel, 27 bits for message1, 32 bits for message2
 	public static void broadcast(int channel, int message1, int message2, int radius) throws GameActionException {
-		rc.broadcastMessageSignal((channel << 27) + message1, message2, radius);
+		rc.broadcastMessageSignal((channel << 27) | message1, message2, radius);
+		// System.out.println("broadcast " + ((channel << 27) + message1) + " " + message2);
 	}
 
 	public static void process() throws GameActionException {
@@ -63,7 +66,7 @@ public class Radio extends Bot {
 				if(message == null) {
 					channelQueue[32].add(new MySignal(incomingSignals[i].getID(), incomingSignals[i].getLocation(), 0, -1));
 				} else {
-					channelQueue[message[0] >>> 27].add(new MySignal(incomingSignals[i].getID(), incomingSignals[i].getLocation(), message[0] % (1 << 27), message[1]));
+					channelQueue[message[0] >>> 27].add(new MySignal(incomingSignals[i].getID(), incomingSignals[i].getLocation(), message[0] ^ ((message[0] >>> 27) << 27), message[1]));
 				}
 			} else {
 				enemySignal.add(new MySignal(incomingSignals[i].getID(), incomingSignals[i].getLocation(), (incomingSignals[i].getMessage() == null ? 0 : 1), -1)); // we don't care about the message, but if message1 == 1 then the enemy is an Archon or Scout
@@ -84,6 +87,30 @@ public class Radio extends Bot {
 			return null;
 		}
 		MySignal signal = channelQueue[2].remove();
+		return new IdAndMapLocation(signal.id, new MapLocation(signal.message1 - 16000, signal.message2 - 16000));
+	}
+
+	public static void broadcastNeutralLocation(MapLocation neutralLocation, int radius) throws GameActionException {
+		broadcast(3, neutralLocation.x + 16000, neutralLocation.y + 16000, radius);
+	}
+
+	public static IdAndMapLocation getNeutralLocation() throws GameActionException {
+		if(channelQueue[3].isEmpty()) {
+			return null;
+		}
+		MySignal signal = channelQueue[3].remove();
+		return new IdAndMapLocation(signal.id, new MapLocation(signal.message1 - 16000, signal.message2 - 16000));
+	}
+
+	public static void broadcastPartsLocation(MapLocation partsLocation, int radius) throws GameActionException {
+		broadcast(2, partsLocation.x + 16000, partsLocation.y + 16000, radius);
+	}
+
+	public static IdAndMapLocation getPartsLocation() throws GameActionException {
+		if(channelQueue[4].isEmpty()) {
+			return null;
+		}
+		MySignal signal = channelQueue[4].remove();
 		return new IdAndMapLocation(signal.id, new MapLocation(signal.message1 - 16000, signal.message2 - 16000));
 	}
 
@@ -121,5 +148,38 @@ public class Radio extends Bot {
 		}
 		MySignal signal = channelQueue[8].remove();
 		return signal.id;
+	}
+	public static void broadcastInitialStrategyRequest(int radius) throws GameActionException {
+		rc.broadcastSignal(radius);
+	}
+	public static int getInitialStrategyRequest() throws GameActionException {
+		if(channelQueue[32].isEmpty()) {
+			return -1;
+		}
+		MySignal signal = channelQueue[32].remove();
+		return signal.id;
+		
+	}
+	public static void broadcastStrategyAssignment(int strategy, int radius) throws GameActionException {
+		broadcast(30, strategy, 0, radius);
+	}
+	public static int getStrategyAssignment() throws GameActionException {
+		if(channelQueue[30].isEmpty()) {
+			return -1;
+		}
+		MySignal signal = channelQueue[30].remove();
+		return signal.message1;
+	}
+	public static void broadcastTuneCommand(int id, int channel, int radius) throws GameActionException {
+		broadcast(0, id, channel, radius);
+	}
+	public static int getTuneCommand() throws GameActionException {
+		if(!channelQueue[0].isEmpty()) {
+			MySignal signal = channelQueue[0].remove();
+			if(signal.message1 == ID) {
+				return signal.message2;
+			}
+		}
+		return -1;
 	}
 }
