@@ -14,6 +14,7 @@ import java.util.*;
 // 6: move order
 // 7: defend order
 // 8: clear defend order
+// 9: turret attack order
 // ...
 // 30: unit-specific strategy assignment
 // 31: unit-specific move order
@@ -149,9 +150,23 @@ public class Radio extends Bot {
 		MySignal signal = channelQueue[8].remove();
 		return signal.id;
 	}
+
+	public static void broadcastTurretAttack(MapLocation enemy, int radius) throws GameActionException {
+		broadcast(9, enemy.x + 16000, enemy.y + 16000, radius);
+	}
+
+	public static IdAndMapLocation getTurretAttack() throws GameActionException {
+		if(channelQueue[9].isEmpty()) {
+			return null;
+		}
+		MySignal signal = channelQueue[9].remove();
+		return new IdAndMapLocation(signal.id, new MapLocation(signal.message1 - 16000, signal.message2 - 16000));
+	}
+
 	public static void broadcastInitialStrategyRequest(int radius) throws GameActionException {
 		rc.broadcastSignal(radius);
 	}
+
 	public static int getInitialStrategyRequest() throws GameActionException {
 		if(channelQueue[32].isEmpty()) {
 			return -1;
