@@ -59,7 +59,7 @@ public class Archon extends Bot {
 
 		for (int i = 0; i < friendWithinRange.length; ++i) {
 			if (friendWithinRange[i].health != friendWithinRange[i].maxHealth && 
-					(friendWithinRange[i].type.attackRadiusSquared > distanceBetween(rc.getLocation(), friendWithinRange[i].location)) 
+					(ATTACK_RANGE > distanceBetween(rc.getLocation(), friendWithinRange[i].location)) 
 					&& (friendWithinRange[i].type != RobotType.ARCHON)) {
 				rc.repair(friendWithinRange[i].location); break;
 			}
@@ -152,6 +152,20 @@ public class Archon extends Bot {
 				}
 			} else if (den != null) {
 				Nav.goTo(den.location);
+			}
+		}
+		if (rc.isCoreReady()) {
+			int rot = (int)(Math.random() * 8);
+			Direction dirToMove = Direction.EAST;
+			for (int i = 0; i < rot; ++i)
+				dirToMove = dirToMove.rotateLeft();
+
+			for (int i = 0; i < 8; ++i) {
+				if (rc.canMove(dirToMove)) {
+					rc.move(dirToMove); break;
+				}
+
+				dirToMove = dirToMove.rotateLeft();
 			}
 		}
 	}

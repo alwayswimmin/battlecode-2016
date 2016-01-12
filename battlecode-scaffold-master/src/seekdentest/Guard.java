@@ -46,7 +46,23 @@ public class Guard extends Bot {
 				Nav.goTo(enemiesWithinSightRange[0].location);
 			}
 		}
+
 		moveSomewhere();
+
+		if (rc.isCoreReady()) {
+			int rot = (int)(Math.random() * 8);
+			Direction dirToMove = Direction.EAST;
+			for (int i = 0; i < rot; ++i)
+				dirToMove = dirToMove.rotateLeft();
+
+			for (int i = 0; i < 8; ++i) {
+				if (rc.canMove(dirToMove)) {
+					rc.move(dirToMove); break;
+				}
+
+				dirToMove = dirToMove.rotateLeft();
+			}
+		}
 	}
 
 	private static LinkedList<Integer> defendQueue;
