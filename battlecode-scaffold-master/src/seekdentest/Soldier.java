@@ -63,10 +63,10 @@ public class Soldier extends Bot {
 		}
 
 		if(rc.isCoreReady()) {
-			RobotInfo[] immediateHostile = rc.senseHostileRobots(myLocation, 2);
+			RobotInfo[] immediateHostile = rc.senseHostileRobots(myLocation, 4);
 			for(int i = immediateHostile.length; --i >= 0; ) {
 				if(immediateHostile[i].type == RobotType.STANDARDZOMBIE || immediateHostile[i].type == RobotType.BIGZOMBIE
-						|| immediateHostile[i].type == RobotType.FASTZOMBIE) {
+						|| immediateHostile[i].type == RobotType.FASTZOMBIE || immediateHostile[i].type == RobotType.GUARD) {
 					Nav.goTo(myLocation.add(immediateHostile[i].location.directionTo(myLocation)));
 					if(!rc.isCoreReady()) {
 						break;
