@@ -90,6 +90,30 @@ public class Radio extends Bot {
 		return new IdAndMapLocation(signal.id, new MapLocation(signal.message1 - 16000, signal.message2 - 16000));
 	}
 
+	public static void broadcastNeutralLocation(MapLocation neutralLocation, int radius) throws GameActionException {
+		broadcast(3, neutralLocation.x + 16000, neutralLocation.y + 16000, radius);
+	}
+
+	public static IdAndMapLocation getNeutralLocation() throws GameActionException {
+		if(channelQueue[3].isEmpty()) {
+			return null;
+		}
+		MySignal signal = channelQueue[3].remove();
+		return new IdAndMapLocation(signal.id, new MapLocation(signal.message1 - 16000, signal.message2 - 16000));
+	}
+
+	public static void broadcastPartsLocation(MapLocation partsLocation, int radius) throws GameActionException {
+		broadcast(2, partsLocation.x + 16000, partsLocation.y + 16000, radius);
+	}
+
+	public static IdAndMapLocation getPartsLocation() throws GameActionException {
+		if(channelQueue[4].isEmpty()) {
+			return null;
+		}
+		MySignal signal = channelQueue[4].remove();
+		return new IdAndMapLocation(signal.id, new MapLocation(signal.message1 - 16000, signal.message2 - 16000));
+	}
+
 	public static void broadcastMoveLocation(MapLocation dest, int radius) throws GameActionException {
 		broadcast(6, dest.x + 16000, dest.y + 16000, radius);
 	}

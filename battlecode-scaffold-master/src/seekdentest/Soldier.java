@@ -25,6 +25,7 @@ public class Soldier extends Bot {
 
 	private static MapLocation defendLocation = null;
 	private static MapLocation attackLocation = null;
+	private static int turnsSinceLastAttack = 100;
 	private static void action() throws GameActionException {
 		// take my turn
 		processSignals();
@@ -34,11 +35,13 @@ public class Soldier extends Bot {
 			// Check if weapon is ready
 			if (rc.isWeaponReady()) {
 				rc.attackLocation(enemiesWithinRange[0].location);
+				turnsSinceLastAttack = 0;
 			}
 		} else if (zombiesWithinRange.length > 0) {
 			// Check if weapon is ready
 			if (rc.isWeaponReady()) {
 				rc.attackLocation(zombiesWithinRange[0].location);
+				turnsSinceLastAttack = 0;
 			}
 		}
 		switch(strategy) {
@@ -51,12 +54,28 @@ public class Soldier extends Bot {
 			case 0:
 				break;
 			case 1:
-				moveSomewhere();
+				if(turnsSinceLastAttack >= 2) {
+					moveSomewhere();
+				}
 				break;
 			default:
 				break;
 		}
 
+		if(rc.isCoreReady()) {
+			RobotInfo[] immediateHostile = rc.senseHostileRobots(myLocation, 2);
+			for(int i = immediateHostile.length; --i >= 0; ) {
+				if(immediateHostile[i].type == RobotType.STANDARDZOMBIE || immediateHostile[i].type == RobotType.BIGZOMBIE
+						|| immediateHostile[i].type == RobotType.FASTZOMBIE) {
+					Nav.goTo(myLocation.add(immediateHostile[i].location.directionTo(myLocation)));
+					if(!rc.isCoreReady()) {
+						break;
+					}
+				}
+			}
+		}
+
+				if(turnsSinceLastAttack >= 2) {
 		if (rc.isCoreReady()) {
 			int rot = (int)(Math.random() * 8);
 			Direction dirToMove = Direction.EAST;
@@ -70,7 +89,9 @@ public class Soldier extends Bot {
 
 				dirToMove = dirToMove.rotateLeft();
 			}
+			}
 		}
+		turnsSinceLastAttack++;
 	}
 
 	private static LinkedList<Integer> defendQueue;

@@ -1,6 +1,7 @@
 package seekdentest;
 
 import battlecode.common.*;
+import java.util.*;
 
 public class Archon extends Bot {
 	private static int scoutsBuilt = 0;
@@ -19,7 +20,15 @@ public class Archon extends Bot {
 	private static void init() throws GameActionException {
 		// things that run for the first time
 		personalHQ = rc.getLocation();
+		neutralQueue = new LinkedList<MapLocation>();
+		partsQueue = new LinkedList<MapLocation>();
 	}
+
+	private static MapLocation neutralLocation = null;
+	private static MapLocation partsLocation = null;
+
+	private static LinkedList<MapLocation> neutralQueue;
+	private static LinkedList<MapLocation> partsQueue;
 
 	private static double distanceBetween(MapLocation a, MapLocation b) {
 		return (a.x-b.x)*(a.x-b.x)+(a.y-b.y)*(a.y-b.y);
@@ -68,8 +77,9 @@ public class Archon extends Bot {
 		int canActivate = -1;
 
 		for (int i = 0; i < neutralWithinRange.length; ++i) {
-			if (distanceBetween(rc.getLocation(), neutralWithinRange[i].location) < 3)
+			if (distanceBetween(rc.getLocation(), neutralWithinRange[i].location) < 3) {
 				canActivate = i;
+			}
 		}
 
 		double enemycenterx = 0, enemycentery = 0;
@@ -98,7 +108,7 @@ public class Archon extends Bot {
 			}
 		}
 
-		int typeToBuild = scoutsBuilt++ < 1 ? 2 : (Math.random() > 0.2 ? 3 : 1);
+		int typeToBuild = scoutsBuilt++ < 1 ? 2 : (Math.random() > 0.1 ? 3 : 1);
 		// 0: ARCHON
 		// 1: GUARD
 		// 2: SCOUT
@@ -150,8 +160,25 @@ public class Archon extends Bot {
 						dirToBuild = dirToBuild.rotateLeft();
 					}
 				}
-			} else if (den != null) {
-				Nav.goTo(den.location);
+			} else if (rc.isCoreReady()) {
+				if(neutralWithinRange.length > 0) {
+					Nav.goTo(neutralWithinRange[0].location);
+				}
+				if(rc.isCoreReady()) {
+					MapLocation[] partsLocations = rc.sensePartLocations(SIGHT_RANGE);
+					if(partsLocations.length > 0) {
+						int maxindex = 0;
+						for(int i = partsLocations.length; --i > 0; ) {
+							if(rc.senseParts(partsLocations[i]) > rc.senseParts(partsLocations[maxindex])) {
+								maxindex = i;
+							}
+						}
+						Nav.goTo(partsLocations[maxindex]);
+					}
+				}
+				if(rc.isCoreReady()) {
+					moveSomewhere();
+				}
 			}
 		}
 		if (rc.isCoreReady()) {
@@ -206,17 +233,54 @@ public class Archon extends Bot {
 			Radio.broadcastStrategyAssignment(determineStrategy(requestingRobotTypeInt), 10);
 			strategyRequest = Radio.getInitialStrategyRequest();
 		}
+		IdAndMapLocation newNeutral = null, newParts = null;
+		newNeutral = Radio.getNeutralLocation(); newParts = Radio.getPartsLocation();
+		while(newNeutral != null) {
+			neutralQueue.add(newNeutral.location);
+			newNeutral = Radio.getDefendLocation();
+		}
+		while(newParts != null) {
+			partsQueue.add(newParts.location);
+			newParts = Radio.getPartsLocation();
+		}
 	}
+
+	private static void moveSomewhere() throws GameActionException {
+		while(!neutralQueue.isEmpty()) {
+			MapLocation next = neutralQueue.element();
+				if(rc.isCoreReady()) {
+					Nav.goTo(next);
+				}
+			if(rc.canSense(next)) {
+				neutralQueue.remove();
+			}
+			return;
+		}
+		if(!partsQueue.isEmpty()) {
+			MapLocation next = partsQueue.element();
+			if(rc.isCoreReady()) {
+				Nav.goTo(next);
+			}
+			if(rc.canSense(next)) {
+				partsQueue.remove();
+			}
+			return;
+		}
+		if(den != null) {
+			Nav.goTo(den.location);
+		}
+	}
+
 
 	private static int determineStrategy(int robotType) throws GameActionException {
 		switch(robotType) {
 			case 0:
 			case 1:
-				return unitsOfTypeBuilt[robotType] % 2; // 0 defend, 1 attack
+				return 2 - (unitsOfTypeBuilt[robotType] % 3) % 2; // 0 defend, 1 attack
 			case 2:
 				return 100;
 			case 3:
-				return unitsOfTypeBuilt[robotType] % 2; // 0 defend, 1 attack
+				return 2 - (unitsOfTypeBuilt[robotType] % 3) % 2; // 0 defend, 1 attack
 			case 4:
 			case 5:
 			default:
