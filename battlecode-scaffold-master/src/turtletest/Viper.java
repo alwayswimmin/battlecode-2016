@@ -118,6 +118,10 @@ public class Viper extends Bot {
 	private static void processSignals() throws GameActionException {
 		IdAndMapLocation newDefend = null, newMove = null; int clearDefend = -1;
 		newDefend = Radio.getDefendLocation(); newMove = Radio.getMoveLocation(); clearDefend = Radio.getClearDefend();
+        IdAndMapLocation newHQ = Radio.getMoveCampLocation();                            
+        if(newHQ != null) {
+            personalHQ = newHQ.location;
+        }
 		while(newDefend != null) {
 			if(teamMemberNeedsHelp[newDefend.id] == 0) {
 				defendQueue.add(newDefend.id);
@@ -157,5 +161,9 @@ public class Viper extends Bot {
 			}
 			return;
 		}
+        if(rc.isCoreReady()) {
+            Nav.goTo(personalHQ);
+            return;
+        }
 	}
 }

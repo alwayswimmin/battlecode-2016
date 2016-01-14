@@ -4,10 +4,35 @@ import battlecode.common.*;
 import java.util.*;
 
 public class Archon extends Bot {
-	private static int turretsBuilt = 0;
-	private static Direction[] directions = new Direction[8];
-	private static int forcedMoveCounter = 0; //when I'm forcing to Archon to override moves and go in a specific direction for a while
+	private static int scoutsBuilt = 0;
+	private static int forcedMoveCounter = 0; // for when Archon is overidden to move in a specific direction
 	private static Direction forcedMoveDir;
+	private static MapLocation neutralLocation = null;
+	private static MapLocation partsLocation = null;
+	private static LinkedList<MapLocation> neutralQueue;
+	private static LinkedList<MapLocation> partsQueue;
+
+	private static int radiusLimit = 4;
+	private static IdAndMapLocation den = null;
+	private static int turnsSinceEnemySeen = 100;
+
+	// 0: ARCHON
+	// 1: GUARD
+	// 2: SCOUT
+	// 3: SOLDIER
+	// 4: TURRET/TTM
+	// 5: VIPER
+	private static RobotType[] robotTypes = {
+		RobotType.ARCHON,
+		RobotType.GUARD,
+		RobotType.SCOUT,
+		RobotType.SOLDIER,
+		RobotType.TURRET,
+		RobotType.VIPER
+	};
+
+	private static int[] unitsOfTypeBuilt = {1, 0, 0, 0, 0, 0};
+	// includes activation.
 
 	public static void run(RobotController _rc) throws GameActionException {
 		Bot.init(_rc);
@@ -21,85 +46,33 @@ public class Archon extends Bot {
 	}
 
 	private static void init() throws GameActionException {
-		// things that run for the first time
+		// initializes Archon
 		neutralQueue = new LinkedList<MapLocation>();
 		partsQueue = new LinkedList<MapLocation>();
-		directions[0] = Direction.EAST;
-		for (int i = 1; i < 8; ++i) {
-			directions[i] = directions[i-1].rotateLeft();
-		}
 	}
-
-	private static MapLocation neutralLocation = null;
-	private static MapLocation partsLocation = null;
-
-	private static LinkedList<MapLocation> neutralQueue;
-	private static LinkedList<MapLocation> partsQueue;
-
-	private static int radiusLimit = 4;
-
-	private static double distanceBetween(MapLocation a, MapLocation b) {
-		return (a.x-b.x)*(a.x-b.x)+(a.y-b.y)*(a.y-b.y);
-	}
-
-	private static int distToWall(MapLocation a, Direction dir) throws GameActionException {
-		MapLocation b = a;
-		for (int i = 0; i < 4; ++i) {
-			b = b.add(dir);
-			if (!rc.onTheMap(b))
-				return i+1;
-		}
-
-		return 1000; //represents "very fat", out of SIGHT_RANGE
-	}
-
-	private static int rotationsTo(Direction a, Direction b) throws GameActionException {
-		Direction c = a;
-
-		for (int i = 0; i < 8; ++i) {
-			if (c == b)
-				return Math.min(i, 8-i);
-			c = c.rotateLeft();
-		}
-
-		return 0;
-	}
-
-	private static IdAndMapLocation den = null;
-
-	private static int turnsSinceEnemySeen = 100;
-
-	private static RobotType[] robotTypes = {
-		RobotType.ARCHON,
-		RobotType.GUARD,
-		RobotType.SCOUT,
-		RobotType.SOLDIER,
-		RobotType.TURRET,
-		RobotType.VIPER
-	};
-	// 0: ARCHON
-	// 1: GUARD
-	// 2: SCOUT
-	// 3: SOLDIER
-	// 4: TURRET/TTM
-	// 5: VIPER
-	private static int[] unitsOfTypeBuilt = {1, 0, 0, 0, 0, 0};
-	// includes activation.
 
 	private static void action() throws GameActionException {
-		// take my turn
+		// takes turn in following order:
+		//     makes forced moves if necessary
+		//     heals friends
+		//     processes enemies (and possibly calls to defend)
+
 		myLocation = rc.getLocation();
 		if(rc.getRoundNum() == 600) {
 			personalHQ = myLocation;
 		}
+		// make forced moves if forced move counter is non-zero
 		if (forcedMoveCounter > 0 && rc.isCoreReady()) {
 			forcedMoveCounter--;
 			if (rc.canMove(forcedMoveDir)) {
-				rc.move(forcedMoveDir); return;
+				rc.move(forcedMoveDir);
+				return;
 			} else if (rc.canMove(forcedMoveDir.rotateLeft())) {
-				rc.move(forcedMoveDir.rotateLeft()); return;
+				rc.move(forcedMoveDir.rotateLeft());
+				return;
 			} else if (rc.canMove(forcedMoveDir.rotateRight())) {
-				rc.move(forcedMoveDir.rotateRight()); return;
+				rc.move(forcedMoveDir.rotateRight());
+				return;
 			} else {
 				forcedMoveCounter = 0;
 			}
@@ -109,52 +82,58 @@ public class Archon extends Bot {
 		RobotInfo[] neutralWithinRange = rc.senseNearbyRobots(SIGHT_RANGE, Team.NEUTRAL);
 		RobotInfo[] friendWithinRange = rc.senseNearbyRobots(SIGHT_RANGE, rc.getTeam());
 
+		// processes friends and tries to heal them
 		for (int i = 0; i < friendWithinRange.length; ++i) {
 			if (friendWithinRange[i].health != friendWithinRange[i].maxHealth && 
 					(ATTACK_RANGE > distanceBetween(rc.getLocation(), friendWithinRange[i].location)) 
 					&& (friendWithinRange[i].type != RobotType.ARCHON)) {
-				rc.repair(friendWithinRange[i].location); break;
+				rc.repair(friendWithinRange[i].location);
+				break;
 			}
 		}
 
-		int canActivate = -1;
+		int enemyCentroidX = 0, enemyCentroidY = 0;
+		MapLocation enemyCentroid = null;
 
+		if(hostileWithinRange.length != 0) {
+			// if enemies, call friends to defend
+			int enemyCount = hostileWithinRange.length;
+			if(turnsSinceEnemySeen > 5) { // waits at least 5 turns between broadcasts
+				Radio.broadcastDefendLocation(myLocation, 1000);
+			}
+			turnsSinceEnemySeen = 0;
+			// finds centroid of visible enemies
+			for(int i = enemyCount; --i >= 0; ) {
+				enemyCentroidX += hostileWithinRange[i].location.x;
+				enemyCentroidY += hostileWithinRange[i].location.y;
+			}
+			enemyCentroid = new MapLocation(enemyCentroidX / enemyCount, enemyCentroidY / enemyCount);
+		} else {
+			turnsSinceEnemySeen++;
+			if(turnsSinceEnemySeen == 15) {
+				Radio.broadcastClearDefend(1000);
+			}
+			// if no enemies, send friends to den
+			den = Radio.getDenLocation();
+			if(den != null) {
+				Radio.broadcastMoveLocation(den.location, 1000);
+			}
+		}
+
+		// finds neutrals to activate
+		int canActivate = -1;
 		for (int i = 0; i < neutralWithinRange.length; ++i) {
 			if (distanceBetween(rc.getLocation(), neutralWithinRange[i].location) < 3) {
 				canActivate = i;
 			}
 		}
 
-		double enemycenterx = 0, enemycentery = 0;
-		MapLocation enemycenter = null;
-
-		if(hostileWithinRange.length != 0) {
-			if(turnsSinceEnemySeen > 5) {
-				Radio.broadcastDefendLocation(myLocation, 1000);
-			}
-			turnsSinceEnemySeen = 0;
-			for(int i = hostileWithinRange.length; --i >= 0; ) {
-				enemycenterx += hostileWithinRange[i].location.x;
-				enemycentery += hostileWithinRange[i].location.y;
-			}
-			enemycenter = new MapLocation((int) (enemycenterx / hostileWithinRange.length + (enemycenterx > 0 ? 1 : -1)), (int) (enemycentery / hostileWithinRange.length + (enemycentery > 0 ? 1 : -1)));
-		} else {
-			turnsSinceEnemySeen++;
-			if(turnsSinceEnemySeen == 15) {
-				Radio.broadcastClearDefend(1000);
-			}
-
-			den = Radio.getDenLocation();
-
-			if(den != null) {
-				Radio.broadcastMoveLocation(den.location, 1000);
-			}
-		}
-
+		// builds friends
 		int typeToBuild;
 		boolean addedRobot;
 		switch(strategy) {
 			case -1:
+				// assign a strategy to Archon
 				if(rc.getTeamParts() >= 300) {
 					strategy = 0;
 				} else {
@@ -164,17 +143,22 @@ public class Archon extends Bot {
 				break;
 			case 0:
 				processSignals();
-
-				typeToBuild = turretsBuilt++ < 2 ? 4 : Math.random() > 0.8 ? 2 : 4;
 				// 0: ARCHON
 				// 1: GUARD
 				// 2: SCOUT
 				// 3: SOLDIER
 				// 4: TURRET/TTM
 				// 5: VIPER
-
+				if(scoutsBuilt++ < 2){
+					typeToBuild = 4;
+				} else if(Math.random() > 0.8){
+					typeToBuild = 2;
+				} else {
+					typeToBuild = 4;
+				}
 				addedRobot = false;
 				if (rc.isCoreReady()) {
+					// activates neutrals if possible
 					if (canActivate > -1) {
 						rc.activate(neutralWithinRange[canActivate].location);
 						switch(neutralWithinRange[canActivate].type) {
@@ -202,8 +186,8 @@ public class Archon extends Bot {
 						}
 						unitsOfTypeBuilt[typeToBuild]++;
 						addedRobot = true;
-					} else if(enemycenter != null && !enemycenter.equals(myLocation)) {
-						MapLocation dest = new MapLocation(4 * myLocation.x - 3 * enemycenter.x, 4 * myLocation.y - 3 * enemycenter.y);
+					} else if(enemyCentroid != null && !enemyCentroid.equals(myLocation)) {
+						MapLocation dest = new MapLocation(4 * myLocation.x - 3 * enemyCentroid.x, 4 * myLocation.y - 3 * enemyCentroid.y);
 						boolean[] closeTo = {false, false, false, false};
 
 						Direction goTo = directions[1];
@@ -264,15 +248,21 @@ public class Archon extends Bot {
 				break;
 			case 1:
 				processSignals();
-
-				typeToBuild = unitsOfTypeBuilt[2] < 1 ? 2 : Math.random() > 0.9 ? 2 : Math.random() > 0.8 ? 1 : 3;
 				// 0: ARCHON
 				// 1: GUARD
 				// 2: SCOUT
 				// 3: SOLDIER
 				// 4: TURRET/TTM
 				// 5: VIPER
-
+				if(unitsOfTypeBuilt[2] < 1 || Math.random() > 0.9){
+					typeToBuild = 2;
+				} else if(Math.random() > 0.7) {
+					typeToBuild = 5;
+				} else if(Math.random() > 0.7) {
+					typeToBuild = 1;
+				} else {
+					typeToBuild = 3;
+				}
 				addedRobot = false;
 				if (rc.isCoreReady()) {
 					if (canActivate > -1) {
@@ -302,8 +292,8 @@ public class Archon extends Bot {
 						}
 						unitsOfTypeBuilt[typeToBuild]++;
 						addedRobot = true;
-					} else if(enemycenter != null && !enemycenter.equals(myLocation)) {
-						MapLocation dest = new MapLocation(4 * myLocation.x - 3 * enemycenter.x, 4 * myLocation.y - 3 * enemycenter.y);
+					} else if(enemyCentroid != null && !enemyCentroid.equals(myLocation)) {
+						MapLocation dest = new MapLocation(4 * myLocation.x - 3 * enemyCentroid.x, 4 * myLocation.y - 3 * enemyCentroid.y);
 						Nav.goTo(dest, new SPAll(hostileWithinRange));
 					} else if (typeToBuild != -1 && rc.hasBuildRequirements(robotTypes[typeToBuild]) && (rc.getRoundNum() < 550 || rc.getTeamParts() > 130)) {
 						Direction dirToBuild = Direction.EAST;
@@ -357,6 +347,10 @@ public class Archon extends Bot {
 	}
 
 	private static void processSignals() throws GameActionException {
+		// processes radio signals:
+		//     receives strategy requests and assigns strategies
+		//     gets neutral locations
+		//     gets parts locations
 		int strategyRequest = Radio.getInitialStrategyRequest();
 		while(strategyRequest != -1) {
 			Radio.broadcastTuneCommand(strategyRequest, 30, 6);
@@ -445,7 +439,7 @@ public class Archon extends Bot {
 			case 4:
 				return strategy; // 0 turret defense, 1 roam
 			case 5:
-				return strategy;
+				return 1;
 			default:
 				return 100;
 		}

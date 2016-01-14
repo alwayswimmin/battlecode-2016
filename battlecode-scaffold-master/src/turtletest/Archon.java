@@ -47,6 +47,7 @@ public class Archon extends Bot {
 
 	private static void init() throws GameActionException {
 		// initializes Archon
+		personalHQ = rc.getLocation();
 		neutralQueue = new LinkedList<MapLocation>();
 		partsQueue = new LinkedList<MapLocation>();
 	}
@@ -60,6 +61,7 @@ public class Archon extends Bot {
 		myLocation = rc.getLocation();
 		if(rc.getRoundNum() == 600) {
 			personalHQ = myLocation;
+			Radio.broadcastMoveCampLocation(personalHQ, 1000);
 		}
 		// make forced moves if forced move counter is non-zero
 		if (forcedMoveCounter > 0 && rc.isCoreReady()) {
@@ -240,6 +242,9 @@ public class Archon extends Bot {
 								dirToMove = dirToMove.rotateLeft();
 							}
 						}
+						if(rc.isCoreReady()) {
+							Nav.goTo(personalHQ);
+						}
 					}
 				}
 				if(rc.getRoundNum() % 50 == 0) {
@@ -351,6 +356,10 @@ public class Archon extends Bot {
 		//     receives strategy requests and assigns strategies
 		//     gets neutral locations
 		//     gets parts locations
+		IdAndMapLocation newHQ = Radio.getMoveCampLocation();
+		if(newHQ != null) {
+			personalHQ = newHQ.location;
+		}
 		int strategyRequest = Radio.getInitialStrategyRequest();
 		while(strategyRequest != -1) {
 			Radio.broadcastTuneCommand(strategyRequest, 30, 6);
@@ -419,8 +428,12 @@ public class Archon extends Bot {
 			}
 			return;
 		}
-		if(den != null) {
+		if(rc.isCoreReady() && den != null) {
 			Nav.goTo(den.location);
+		}
+		if(rc.isCoreReady()) {
+			Nav.goTo(personalHQ);
+			return;
 		}
 	}
 
@@ -434,8 +447,7 @@ public class Archon extends Bot {
 			case 2:
 				return strategy; // 0 turret defense, 1 roam
 			case 3:
-				return 1;
-				// return 2 - (unitsOfTypeBuilt[robotType] % 3) % 2; // 0 defend, 1 attack
+				return 1 - (unitsOfTypeBuilt[robotType] % 3) % 2; // 0 defend, 1 attack
 			case 4:
 				return strategy; // 0 turret defense, 1 roam
 			case 5:

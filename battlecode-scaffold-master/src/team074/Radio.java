@@ -57,9 +57,24 @@ public class Radio extends Bot {
 	}
 
 	public static void broadcast(int channel, int message1, int message2, int radius) throws GameActionException {
-		// broadcasts message on a specified channel
+		// broadcasts message to a specified channel
 		// uses 5 bits for channel, 27 bits for message1, and 32 bits for message2
 		rc.broadcastMessageSignal((channel << 27) | message1, message2, radius);
+	}
+
+	public static void broadcastLocation(int channel, MapLocation location, int radius) throws GameActionException {
+		// broadcasts location to a specified channel
+		broadcast(channel, location.x + 16000, location.y + 16000, radius);
+	}
+
+	public static IdAndMapLocation getLocation(int channel) throws GameActionException {
+		// reads location from a specified channel
+		if(channelQueue[channel].isEmpty()){
+			return null;
+		}
+		MySignal signal = channelQueue[channel].remove();
+		MapLocation location = new MapLocation(signal.message1 - 16000, signal.message2 - 16000);
+		return new IdAndMapLocation(signal.id, location);
 	}
 
 	public static void process() throws GameActionException {
@@ -74,7 +89,8 @@ public class Radio extends Bot {
 					channelQueue[32].add(new MySignal(id, location, 0, -1));
 				} else {
 					int channel = message[0] >>> 27;
-					MySignal mysignal = new MySignal(id, location, message[0] ^ (channel << 27), message[1]);
+					message[0] ^= (channel << 27);
+					MySignal mysignal = new MySignal(id, location, message[0], message[1]);
 					channelQueue[channel].add(mysignal);
 				}
 			} else {
@@ -91,64 +107,43 @@ public class Radio extends Bot {
 	}
 
 	public static void broadcastDenLocation(MapLocation denLocation, int radius) throws GameActionException {
-		broadcast(2, denLocation.x + 16000, denLocation.y + 16000, radius);
+		broadcastLocation(2, denLocation, radius);
 	}
 
 	public static IdAndMapLocation getDenLocation() throws GameActionException {
-		if(channelQueue[2].isEmpty()) {
-			return null;
-		}
-		MySignal signal = channelQueue[2].remove();
-		MapLocation location = new MapLocation(signal.message1 - 16000, signal.message2 - 16000);
-		return new IdAndMapLocation(signal.id, location);
+		return getLocation(2);
 	}
 
 	public static void broadcastNeutralLocation(MapLocation neutralLocation, int radius) throws GameActionException {
-		broadcast(3, neutralLocation.x + 16000, neutralLocation.y + 16000, radius);
+		broadcastLocation(3, neutralLocation, radius);
 	}
 
 	public static IdAndMapLocation getNeutralLocation() throws GameActionException {
-		if(channelQueue[3].isEmpty()) {
-			return null;
-		}
-		MySignal signal = channelQueue[3].remove();
-		return new IdAndMapLocation(signal.id, new MapLocation(signal.message1 - 16000, signal.message2 - 16000));
+		return getLocation(3);
 	}
 
 	public static void broadcastPartsLocation(MapLocation partsLocation, int radius) throws GameActionException {
-		broadcast(4, partsLocation.x + 16000, partsLocation.y + 16000, radius);
+		broadcastLocation(4, partsLocation, radius);
 	}
 
 	public static IdAndMapLocation getPartsLocation() throws GameActionException {
-		if(channelQueue[4].isEmpty()) {
-			return null;
-		}
-		MySignal signal = channelQueue[4].remove();
-		return new IdAndMapLocation(signal.id, new MapLocation(signal.message1 - 16000, signal.message2 - 16000));
+		return getLocation(4);
 	}
 
 	public static void broadcastMoveLocation(MapLocation dest, int radius) throws GameActionException {
-		broadcast(6, dest.x + 16000, dest.y + 16000, radius);
+		broadcastLocation(6, dest, radius);
 	}
 
 	public static IdAndMapLocation getMoveLocation() throws GameActionException {
-		if(channelQueue[6].isEmpty()) {
-			return null;
-		}
-		MySignal signal = channelQueue[6].remove();
-		return new IdAndMapLocation(signal.id, new MapLocation(signal.message1 - 16000, signal.message2 - 16000));
+		return getLocation(6);
 	}
 
 	public static void broadcastDefendLocation(MapLocation dest, int radius) throws GameActionException {
-		broadcast(7, dest.x + 16000, dest.y + 16000, radius);
+		broadcastLocation(7, dest, radius);
 	}
 
 	public static IdAndMapLocation getDefendLocation() throws GameActionException {
-		if(channelQueue[7].isEmpty()) {
-			return null;
-		}
-		MySignal signal = channelQueue[7].remove();
-		return new IdAndMapLocation(signal.id, new MapLocation(signal.message1 - 16000, signal.message2 - 16000));
+		return getLocation(7);
 	}
 
 	public static void broadcastClearDefend(int radius) throws GameActionException {
@@ -164,15 +159,11 @@ public class Radio extends Bot {
 	}
 
 	public static void broadcastTurretAttack(MapLocation enemy, int radius) throws GameActionException {
-		broadcast(9, enemy.x + 16000, enemy.y + 16000, radius);
+		broadcastLocation(9, enemy, radius);
 	}
 
 	public static IdAndMapLocation getTurretAttack() throws GameActionException {
-		if(channelQueue[9].isEmpty()) {
-			return null;
-		}
-		MySignal signal = channelQueue[9].remove();
-		return new IdAndMapLocation(signal.id, new MapLocation(signal.message1 - 16000, signal.message2 - 16000));
+		return getLocation(9);
 	}
 
 	public static void broadcastInitialStrategyRequest(int radius) throws GameActionException {
@@ -187,9 +178,11 @@ public class Radio extends Bot {
 		return signal.id;
 
 	}
+
 	public static void broadcastStrategyAssignment(int strategy, int radius) throws GameActionException {
 		broadcast(30, strategy, 0, radius);
 	}
+
 	public static int getStrategyAssignment() throws GameActionException {
 		if(channelQueue[30].isEmpty()) {
 			return -1;
@@ -197,16 +190,20 @@ public class Radio extends Bot {
 		MySignal signal = channelQueue[30].remove();
 		return signal.message1;
 	}
+
 	public static void broadcastTuneCommand(int id, int channel, int radius) throws GameActionException {
 		broadcast(0, id, channel, radius);
 	}
+
 	public static int getTuneCommand() throws GameActionException {
-		if(!channelQueue[0].isEmpty()) {
-			MySignal signal = channelQueue[0].remove();
-			if(signal.message1 == ID) {
-				return signal.message2;
-			}
+		if(channelQueue[0].isEmpty()) {
+			return -1;
 		}
-		return -1;
+		MySignal signal = channelQueue[0].remove();
+		if(signal.message1 == ID) {
+			return signal.message2;
+		} else {
+			return -1;
+		}
 	}
 }

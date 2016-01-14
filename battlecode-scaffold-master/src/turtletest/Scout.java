@@ -99,15 +99,15 @@ public class Scout extends Bot {
 				break;
 			case 0:
 				// turret defense
-          for (int i = 0; i < 8; ++i) {
-            if (rc.isCoreReady() && rc.canMove(dirToMove) && myLocation.add(dirToMove).distanceSquaredTo(personalHQ) < radiusLimit) {
-              Nav.goTo(myLocation.add(dirToMove)); break;
-            }                                                                            
-            dirToMove = dirToMove.rotateLeft();
-          }    
-        if(rc.getRoundNum() % 50 == 0) {                                                 
-          radiusLimit++;
-        } 
+				for (int i = 0; i < 8; ++i) {
+					if (rc.isCoreReady() && rc.canMove(dirToMove) && myLocation.add(dirToMove).distanceSquaredTo(personalHQ) < radiusLimit) {
+						Nav.goTo(myLocation.add(dirToMove)); break;
+					}                                                                            
+					dirToMove = dirToMove.rotateLeft();
+				}    
+				if(rc.getRoundNum() % 50 == 0) {                                                 
+					radiusLimit++;
+				} 
 				break;
 			case 1:
 				// move randomly

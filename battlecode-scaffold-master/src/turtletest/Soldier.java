@@ -102,6 +102,10 @@ public class Soldier extends Bot {
 	private static void processSignals() throws GameActionException {
 		IdAndMapLocation newDefend = null, newMove = null; int clearDefend = -1;
 		newDefend = Radio.getDefendLocation(); newMove = Radio.getMoveLocation(); clearDefend = Radio.getClearDefend();
+		IdAndMapLocation newHQ = Radio.getMoveCampLocation();
+		if(newHQ != null) {
+			personalHQ = newHQ.location;
+		}
 		while(newDefend != null) {
 			if(teamMemberNeedsHelp[newDefend.id] == 0) {
 				defendQueue.add(newDefend.id);
@@ -121,15 +125,17 @@ public class Soldier extends Bot {
 	}
 
 	private static void moveSomewhere() throws GameActionException {
-		while(!defendQueue.isEmpty()) {
-			int next = defendQueue.element();
-			if(teamMemberNeedsHelp[next] > 0 && rc.getRoundNum() - teamMemberNeedsHelp[next] < 200) {
-				if(rc.isCoreReady()) {
-					Nav.goTo(teamLocations[next]);
+		if(strategy == 0) {
+			while(!defendQueue.isEmpty()) {
+				int next = defendQueue.element();
+				if(teamMemberNeedsHelp[next] > 0 && rc.getRoundNum() - teamMemberNeedsHelp[next] < 200) {
+					if(rc.isCoreReady()) {
+						Nav.goTo(teamLocations[next]);
+					}
+					return;
 				}
-				return;
+				defendQueue.remove();
 			}
-			defendQueue.remove();
 		}
 		if(!moveQueue.isEmpty()) {
 			MapLocation next = moveQueue.element();
@@ -141,5 +147,9 @@ public class Soldier extends Bot {
 			}
 			return;
 		}
+        if(rc.isCoreReady()) {
+            Nav.goTo(personalHQ);
+            return;
+        }
 	}
 }

@@ -138,6 +138,14 @@ public class Radio extends Bot {
 		return getLocation(6);
 	}
 
+	public static void broadcastMoveCampLocation(MapLocation dest, int radius) throws GameActionException {
+		broadcastLocation(5, dest, radius);
+	}
+
+	public static IdAndMapLocation getMoveCampLocation() throws GameActionException {
+		return getLocation(5);
+	}
+
 	public static void broadcastDefendLocation(MapLocation dest, int radius) throws GameActionException {
 		broadcastLocation(7, dest, radius);
 	}
