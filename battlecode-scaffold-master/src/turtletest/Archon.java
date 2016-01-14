@@ -47,7 +47,6 @@ public class Archon extends Bot {
 
 	private static void init() throws GameActionException {
 		// initializes Archon
-		personalHQ = rc.getLocation();
 		neutralQueue = new LinkedList<MapLocation>();
 		partsQueue = new LinkedList<MapLocation>();
 	}
@@ -59,6 +58,9 @@ public class Archon extends Bot {
 		//     processes enemies (and possibly calls to defend)
 
 		myLocation = rc.getLocation();
+		if(rc.getRoundNum() == 600) {
+			personalHQ = myLocation;
+		}
 		// make forced moves if forced move counter is non-zero
 		if (forcedMoveCounter > 0 && rc.isCoreReady()) {
 			forcedMoveCounter--;
