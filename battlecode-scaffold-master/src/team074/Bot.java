@@ -1,6 +1,6 @@
-package team074;
-
+// bot template inherited by all robots
 // inspired by https://github.com/TheDuck314/battlecode2015/blob/master/teams/zephyr26_final/Bot.java
+package team074;
 
 import battlecode.common.*;
 
@@ -10,13 +10,9 @@ public class Bot {
 
 	protected static Team myTeam;
 	protected static Team enemyTeam;
-	protected static MapLocation personalHQ; // my gathering point. may change.
-	// NOT set upon init.
-	// basically where you should gather if not on a mission,
-	// for example, archon that made you.
+	protected static MapLocation personalHQ; // where to go when not on mission
 	protected static int strategy;
 
-	// treat these as final even though they aren't really
 	public static RobotType TYPE;
 	public static int ID;
 	public static int SIGHT_RANGE;
@@ -25,6 +21,7 @@ public class Bot {
 	protected static MapLocation myLocation; // bot classes are responsible for keeping this up to date
 
 	protected static void init(RobotController _rc) throws GameActionException {
+		// initializes bot fields
 		rc = _rc;
 
 		myTeam = rc.getTeam();
