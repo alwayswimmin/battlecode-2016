@@ -121,6 +121,7 @@ public class Soldier extends Bot {
 	}
 
 	private static void moveSomewhere() throws GameActionException {
+	/*
 		while(!defendQueue.isEmpty()) {
 			int next = defendQueue.element();
 			if(teamMemberNeedsHelp[next] > 0 && rc.getRoundNum() - teamMemberNeedsHelp[next] < 200) {
@@ -131,6 +132,7 @@ public class Soldier extends Bot {
 			}
 			defendQueue.remove();
 		}
+	*/
 		if(!moveQueue.isEmpty()) {
 			MapLocation next = moveQueue.element();
 			if(rc.isCoreReady()) {

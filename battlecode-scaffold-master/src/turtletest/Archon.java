@@ -7,7 +7,6 @@ public class Archon extends Bot {
 	private static int scoutsBuilt = 0;
 	private static int forcedMoveCounter = 0; // for when Archon is overidden to move in a specific direction
 	private static Direction forcedMoveDir;
-
 	private static MapLocation neutralLocation = null;
 	private static MapLocation partsLocation = null;
 	private static LinkedList<MapLocation> neutralQueue;
@@ -225,7 +224,7 @@ public class Archon extends Bot {
 						}
 					}
 
-					if(rc.isCoreReady()) {
+					if(rc.isCoreReady() && personalHQ != null) {
 						if (rc.isCoreReady()) {
 							int rot = (int)(Math.random() * 8);
 							Direction dirToMove = Direction.EAST;

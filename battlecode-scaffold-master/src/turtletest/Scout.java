@@ -40,6 +40,7 @@ public class Scout extends Bot {
 	private static RobotInfo[]   neutralsWithinRange;
 	private static MapLocation[] partsWithinRange;
 	private static int radiusLimit = 4;
+	private static int cooldownPartsBroadcast = 180;
 
 	private static void action() throws GameActionException {
 		// take my turn
@@ -52,7 +53,6 @@ public class Scout extends Bot {
 		partsWithinRange = rc.sensePartLocations(SIGHT_RANGE);
 
 		int broadcastCount = 0;
-		int cooldownPartsBroadcast = 100;
 
 		for(int i = zombiesWithinRange.length; --i >= 0; ) {
 			if(broadcastCount < 20 && (robotsEncountered[zombiesWithinRange[i].ID] == null || rc.getRoundNum() - turnBroadcasted[zombiesWithinRange[i].ID] > 100) && zombiesWithinRange[i].type == RobotType.ZOMBIEDEN) {

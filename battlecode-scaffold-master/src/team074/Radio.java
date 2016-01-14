@@ -116,7 +116,7 @@ public class Radio extends Bot {
 	}
 
 	public static void broadcastPartsLocation(MapLocation partsLocation, int radius) throws GameActionException {
-		broadcast(2, partsLocation.x + 16000, partsLocation.y + 16000, radius);
+		broadcast(4, partsLocation.x + 16000, partsLocation.y + 16000, radius);
 	}
 
 	public static IdAndMapLocation getPartsLocation() throws GameActionException {
