@@ -87,7 +87,9 @@ public class Turret extends Bot {
 					RobotInfo[] nearbyFriends = rc.senseNearbyRobots(2, rc.getTeam());
 					if(nearbyFriends.length>3){
 						Direction away = randomDirection();
-						rc.pack();
+						if(strategy == 1) {
+							rc.pack();
+						}
 					}
 				}
 			}

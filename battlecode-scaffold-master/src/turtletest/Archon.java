@@ -256,7 +256,9 @@ public class Archon extends Bot {
 				// 5: VIPER
 				if(unitsOfTypeBuilt[2] < 1 || Math.random() > 0.9){
 					typeToBuild = 2;
-				} else if(Math.random() > 0.8){
+				} else if(Math.random() > 0.7) {
+					typeToBuild = 5;
+				} else if(Math.random() > 0.7) {
 					typeToBuild = 1;
 				} else {
 					typeToBuild = 3;
@@ -437,7 +439,7 @@ public class Archon extends Bot {
 			case 4:
 				return strategy; // 0 turret defense, 1 roam
 			case 5:
-				return strategy;
+				return 1;
 			default:
 				return 100;
 		}
