@@ -4,7 +4,7 @@ import battlecode.common.*;
 import java.util.*;
 
 public class Archon extends Bot {
-	private static int scoutsBuilt = 0;
+	private static int turretsBuilt = 0;
 	private static Direction[] directions = new Direction[8];
 	private static int forcedMoveCounter = 0; //when I'm forcing to Archon to override moves and go in a specific direction for a while
 	private static Direction forcedMoveDir;
@@ -22,7 +22,6 @@ public class Archon extends Bot {
 
 	private static void init() throws GameActionException {
 		// things that run for the first time
-		personalHQ = rc.getLocation();
 		neutralQueue = new LinkedList<MapLocation>();
 		partsQueue = new LinkedList<MapLocation>();
 		directions[0] = Direction.EAST;
@@ -90,6 +89,9 @@ public class Archon extends Bot {
 	private static void action() throws GameActionException {
 		// take my turn
 		myLocation = rc.getLocation();
+		if(rc.getRoundNum() == 600) {
+			personalHQ = myLocation;
+		}
 		if (forcedMoveCounter > 0 && rc.isCoreReady()) {
 			forcedMoveCounter--;
 			if (rc.canMove(forcedMoveDir)) {
@@ -163,7 +165,7 @@ public class Archon extends Bot {
 			case 0:
 				processSignals();
 
-				typeToBuild = scoutsBuilt++ < 2 ? 4 : Math.random() > 0.8 ? 2 : 4;
+				typeToBuild = turretsBuilt++ < 2 ? 4 : Math.random() > 0.8 ? 2 : 4;
 				// 0: ARCHON
 				// 1: GUARD
 				// 2: SCOUT
@@ -240,7 +242,7 @@ public class Archon extends Bot {
 						}
 					}
 
-					if(rc.isCoreReady()) {
+					if(rc.isCoreReady() && personalHQ != null) {
 						if (rc.isCoreReady()) {
 							int rot = (int)(Math.random() * 8);
 							Direction dirToMove = Direction.EAST;
