@@ -66,13 +66,13 @@ public class Archon extends Bot {
 		// make forced moves if forced move counter is non-zero
 		if (forcedMoveCounter > 0 && rc.isCoreReady()) {
 			forcedMoveCounter--;
-			if (rc.canMove(forcedMoveDir)) {
+			if (rc.canMove(forcedMoveDir) && rc.senseRubble(rc.getLocation().add(forcedMoveDir)) <= 50)) {
 				rc.move(forcedMoveDir);
 				return;
-			} else if (rc.canMove(forcedMoveDir.rotateLeft())) {
+			} else if (rc.canMove(forcedMoveDir.rotateLeft()) && rc.senseRubble(rc.getLocation().add(forcedMoveDir.rotateLeft()))) {
 				rc.move(forcedMoveDir.rotateLeft());
 				return;
-			} else if (rc.canMove(forcedMoveDir.rotateRight())) {
+			} else if (rc.canMove(forcedMoveDir.rotateRight()) && rc.senseRubble(rc.getLocation().add(forcedMoveDir.rotateRight()))) {
 				rc.move(forcedMoveDir.rotateRight());
 				return;
 			} else {
