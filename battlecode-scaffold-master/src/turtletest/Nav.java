@@ -95,8 +95,8 @@ public class Nav extends Bot {
 				return true;
 			}
 		}
-		
-		int adjRubble = rc.senseRubble(rc.getLocation().add(toDest));
+
+		double adjRubble = rc.senseRubble(rc.getLocation().add(toDest));
 
 		if (adjRubble >= 50 && adjRubble < 200) {
 			MapLocation locAfterMove = rc.getLocation().add(toDest);
