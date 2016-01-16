@@ -77,19 +77,27 @@ public class Turret extends Bot {
 						}
 					}
 				}
-			} else if(counterSinceExpandSignal < 30) {
+			} else if(counterSinceExpandSignal < 20) {
 				expand(radiusLimit);
+			} else if(myLocation.distanceSquaredTo(personalHQ) > radiusLimit) {
+				rc.pack();
 			}
 		}
 		else {
+			if(myLocation.distanceSquaredTo(personalHQ) > radiusLimit && rc.isCoreReady()) {
+				Nav.goTo(personalHQ);
+			}
 			if(enemyArray.length>0){
 				rc.unpack();
-			}else if(counterSinceExpandSignal < 30) {
+			}else if(counterSinceExpandSignal < 20) {
 				expand(radiusLimit);
+			} else if(counterSinceExpandSignal < 30) {
+				if(myLocation.distanceSquaredTo(personalHQ) > radiusLimit / 3 && rc.isCoreReady()) {
+					Nav.goTo(personalHQ);
+				}
 			} else {
 				rc.unpack();
 			}
-
 		}
 	}
 	private static Direction randomDirection() {
@@ -176,5 +184,25 @@ public class Turret extends Bot {
 					rc.unpack();
 				}
 				*/
+	}
+	private static void contract(int radius) throws GameActionException {
+				if(rc.getType() == RobotType.TURRET) {
+					rc.pack();
+				}
+				Direction dirToMove = Direction.EAST;
+					for (int i = 0; i < 8; ++i) {
+						MapLocation target = myLocation.add(dirToMove);
+						if (rc.onTheMap(target) && !rc.isLocationOccupied(target) && rc.senseRubble(target) < GameConstants.RUBBLE_OBSTRUCTION_THRESH && target.distanceSquaredTo(personalHQ) < myLocation.distanceSquaredTo(personalHQ) && target.distanceSquaredTo(personalHQ) <= radius) {
+							if(rc.getType() == RobotType.TTM) {
+								if(rc.isCoreReady()) {
+									Nav.goTo(target);
+								}
+							} else {
+								rc.pack();
+							}
+							return;
+						}
+						dirToMove = dirToMove.rotateLeft();
+					}
 	}
 }

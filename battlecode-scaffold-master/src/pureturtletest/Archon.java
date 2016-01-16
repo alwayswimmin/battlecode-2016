@@ -146,9 +146,10 @@ public class Archon extends Bot {
 				break;
 			case 0:
 				processSignals();
-				if(!myLocation.equals(personalHQ)) {
-					personalHQ = myLocation;
-					Radio.broadcastMoveCampLocation(personalHQ, 1000);
+				if(myLocation.distanceSquaredTo(personalHQ) > 5 && rc.isCoreReady()) {
+					Nav.goTo(personalHQ);
+					// personalHQ = myLocation;
+					// Radio.broadcastMoveCampLocation(personalHQ, 1000);
 				}
 				// 0: ARCHON
 				// 1: GUARD
@@ -192,6 +193,7 @@ public class Archon extends Bot {
 								break;
 						}
 						unitsOfTypeBuilt[typeToBuild]++;
+						System.out.println("unit " + typeToBuild + " built " + unitsOfTypeBuilt[typeToBuild] + "times.");
 						addedRobot = true;
 					} else if(enemyCentroid != null && !enemyCentroid.equals(myLocation)) {
 						MapLocation dest = new MapLocation(4 * myLocation.x - 3 * enemyCentroid.x, 4 * myLocation.y - 3 * enemyCentroid.y);
@@ -226,6 +228,7 @@ public class Archon extends Bot {
 								rc.build(dirToBuild, robotTypes[typeToBuild]);
 								unitsOfTypeBuilt[typeToBuild]++;
 								addedRobot = true;
+								System.out.println("unit " + typeToBuild + " built " + unitsOfTypeBuilt[typeToBuild] + " times.");
 								break;
 							} else {
 								dirToBuild = dirToBuild.rotateLeft();

@@ -4,7 +4,7 @@ import battlecode.common.*;
 
 public class RobotPlayer {
 	public static void run(RobotController _rc) throws Exception {
-		boolean desert = _rc.getZombieSpawnSchedule().getRounds()[0] == 0;
+		boolean desert = false ;// _rc.getZombieSpawnSchedule().getRounds()[0] == 0;
 		if(desert) {
 		switch(_rc.getType()) {
 			case ARCHON:
