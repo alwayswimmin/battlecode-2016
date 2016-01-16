@@ -19,7 +19,7 @@ public class Soldier extends Bot {
 	private static boolean ignoreDens = false;
 
 	private static void init() throws GameActionException {
-		// things that run for the first time
+		// initializes soldier
 		personalHQ = rc.getLocation();
 		defendQueue = new LinkedList<Integer>();
 		moveQueue = new LinkedList<MapLocation>();
@@ -35,7 +35,9 @@ public class Soldier extends Bot {
 	private static MapLocation attackLocation = null;
 	private static int turnsSinceLastAttack = 100;
 	private static void action() throws GameActionException {
-		// take my turn
+		// takes turn in following order:
+		//     processes signals
+		//     looks for enemies and zombies to attack
 		processSignals();
 		RobotInfo[] enemiesWithinRange = rc.senseNearbyRobots(ATTACK_RANGE, enemyTeam);
 		RobotInfo[] zombiesWithinRange = rc.senseNearbyRobots(ATTACK_RANGE, Team.ZOMBIE);
@@ -97,20 +99,20 @@ public class Soldier extends Bot {
 			}
 		}
 
-				if(turnsSinceLastAttack >= 2) {
-		if (rc.isCoreReady()) {
-			int rot = (int)(Math.random() * 8);
-			Direction dirToMove = Direction.EAST;
-			for (int i = 0; i < rot; ++i)
-				dirToMove = dirToMove.rotateLeft();
+		if(turnsSinceLastAttack >= 2) {
+			if (rc.isCoreReady()) {
+				int rot = (int)(Math.random() * 8);
+				Direction dirToMove = Direction.EAST;
+				for (int i = 0; i < rot; ++i)
+					dirToMove = dirToMove.rotateLeft();
 
-			for (int i = 0; i < 8; ++i) {
-				if (rc.canMove(dirToMove)) {
-					rc.move(dirToMove); break;
+				for (int i = 0; i < 8; ++i) {
+					if (rc.canMove(dirToMove)) {
+						rc.move(dirToMove); break;
+					}
+
+					dirToMove = dirToMove.rotateLeft();
 				}
-
-				dirToMove = dirToMove.rotateLeft();
-			}
 			}
 		}
 		turnsSinceLastAttack++;
@@ -169,9 +171,9 @@ public class Soldier extends Bot {
 			}
 			return;
 		}
-        if(rc.isCoreReady()) {
-            Nav.goTo(personalHQ);
-            return;
-        }
+		if(rc.isCoreReady()) {
+			Nav.goTo(personalHQ);
+			return;
+		}
 	}
 }

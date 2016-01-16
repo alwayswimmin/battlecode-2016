@@ -22,10 +22,12 @@ public class Bot {
 	protected static MapLocation myLocation; // bot classes are responsible for keeping this up to date
 
 	public static double distanceBetween(MapLocation a, MapLocation b) {
-		return (a.x-b.x)*(a.x-b.x)+(a.y-b.y)*(a.y-b.y);
+		// returns distance between two map locations
+		return (a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y);
 	}
 
 	public static int distToWall(MapLocation a, Direction dir) throws GameActionException {
+		// returns distance to wall in a given direction
 		MapLocation b = a;
 		for (int i = 0; i < 4; ++i) {
 			b = b.add(dir);
@@ -33,7 +35,7 @@ public class Bot {
 				return i+1;
 		}
 
-		return 1000; //represents "very fat", out of SIGHT_RANGE
+		return 1000; //represents "very far", out of SIGHT_RANGE
 	}
 
 	public static int rotationsTo(Direction a, Direction b) throws GameActionException {
