@@ -1,10 +1,10 @@
-package team074;
+package pureturtletest;
 
 import battlecode.common.*;
 
 import java.util.*;
 
-public class Turret extends Bot {
+public class OldTurret extends Bot {
 	private static Random rnd;
 	private static MapLocation defendLocation, attackLocation;
 	public static void run(RobotController _rc) throws GameActionException {
@@ -136,6 +136,10 @@ public class Turret extends Bot {
 	private static void processSignals() throws GameActionException {
 		IdAndMapLocation newDefend = null, newMove = null; int clearDefend = -1;
 		newDefend = Radio.getDefendLocation(); newMove = Radio.getMoveLocation(); clearDefend = Radio.getClearDefend();
+        IdAndMapLocation newHQ = Radio.getMoveCampLocation();                            
+        if(newHQ != null) {
+            personalHQ = newHQ.location;
+        }           
 		while(newDefend != null) {
 			if(teamMemberNeedsHelp[newDefend.id] == 0) {
 				defendQueue.add(newDefend.id);
@@ -175,5 +179,9 @@ public class Turret extends Bot {
 			}
 			return;
 		}
+        if(rc.isCoreReady()) {
+            Nav.goTo(personalHQ);
+            return;
+        }
 	}
 }

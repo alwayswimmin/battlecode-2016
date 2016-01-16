@@ -1,15 +1,16 @@
-package turtletest;
+package pureturtletest;
 
 import battlecode.common.*;
-import java.util.*;
+import java.util.LinkedList;
 
-public class Viper extends Bot {
+public class Guard extends Bot {
+	private static int radiusLimit = 4;
 	public static void run(RobotController _rc) throws GameActionException {
 		Bot.init(_rc);
 		init();
 		while(true) {
-			Radio.process();
 			myLocation = rc.getLocation();
+			Radio.process();
 			action();
 			Radio.clear();
 			Clock.yield();
@@ -22,44 +23,36 @@ public class Viper extends Bot {
 		moveQueue = new LinkedList<MapLocation>();
 		Radio.broadcastInitialStrategyRequest(10);
 	}
-
-	private static MapLocation defendLocation = null;
-	private static MapLocation attackLocation = null;
-	private static int turnsSinceLastAttack = 100;
 	private static void action() throws GameActionException {
 		// take my turn
 		processSignals();
+			int newRadius = Radio.getTurtleExpand();
+			if(newRadius != -1) {
+				radiusLimit = newRadius;
+			}
 		RobotInfo[] enemiesWithinRange = rc.senseNearbyRobots(ATTACK_RANGE, enemyTeam);
 		RobotInfo[] zombiesWithinRange = rc.senseNearbyRobots(ATTACK_RANGE, Team.ZOMBIE);
-		if (enemiesWithinRange.length > 1) {
-			// Check if weapon is ready
-			for(int i = enemiesWithinRange.length; --i >= 0; ) {
-				if(enemiesWithinRange[i].viperInfectedTurns < 5) {
-					if (rc.isWeaponReady()) {
-						rc.attackLocation(enemiesWithinRange[i].location);
-						turnsSinceLastAttack = 0;
-					}
-				}
-			}
-			if (rc.isWeaponReady()) {
-				rc.attackLocation(enemiesWithinRange[0].location);
-				turnsSinceLastAttack = 0;
-			}
-		} else if (zombiesWithinRange.length > 0) {
-			// Check if weapon is ready
-			for(int i = zombiesWithinRange.length; --i >= 0; ) {
-				if(zombiesWithinRange[i].viperInfectedTurns < 5) {
-					if (rc.isWeaponReady()) {
-						rc.attackLocation(zombiesWithinRange[i].location);
-						turnsSinceLastAttack = 0;
-					}
-				}
-			}
+		if (zombiesWithinRange.length > 0) {
 			if (rc.isWeaponReady()) {
 				rc.attackLocation(zombiesWithinRange[0].location);
-				turnsSinceLastAttack = 0;
+			}
+		} else if (enemiesWithinRange.length > 0) {
+			if (rc.isWeaponReady()) {
+				rc.attackLocation(enemiesWithinRange[0].location);
 			}
 		}
+		RobotInfo[] enemiesWithinSightRange = rc.senseNearbyRobots(SIGHT_RANGE, enemyTeam);
+		RobotInfo[] zombiesWithinSightRange = rc.senseNearbyRobots(SIGHT_RANGE, Team.ZOMBIE);
+		if (zombiesWithinRange.length > 0) {
+			if(rc.isCoreReady()) {
+				Nav.goTo(zombiesWithinSightRange[0].location);
+			}
+		} else if (enemiesWithinRange.length > 0) {
+			if(rc.isCoreReady()) {
+				Nav.goTo(enemiesWithinSightRange[0].location);
+			}
+		}
+
 		switch(strategy) {
 			case -1:
 				int channel = Radio.getTuneCommand();
@@ -70,28 +63,12 @@ public class Viper extends Bot {
 			case 0:
 				break;
 			case 1:
-				if(turnsSinceLastAttack >= 2) {
-					moveSomewhere();
-				}
+				moveSomewhere();
 				break;
 			default:
 				break;
 		}
 
-		if(rc.isCoreReady()) {
-			RobotInfo[] immediateHostile = rc.senseHostileRobots(myLocation, 4);
-			for(int i = immediateHostile.length; --i >= 0; ) {
-				if(immediateHostile[i].type == RobotType.STANDARDZOMBIE || immediateHostile[i].type == RobotType.BIGZOMBIE
-						|| immediateHostile[i].type == RobotType.FASTZOMBIE || immediateHostile[i].type == RobotType.GUARD) {
-					Nav.goTo(myLocation.add(immediateHostile[i].location.directionTo(myLocation)));
-					if(!rc.isCoreReady()) {
-						break;
-					}
-				}
-			}
-		}
-
-				if(turnsSinceLastAttack >= 2) {
 		if (rc.isCoreReady()) {
 			int rot = (int)(Math.random() * 8);
 			Direction dirToMove = Direction.EAST;
@@ -99,15 +76,17 @@ public class Viper extends Bot {
 				dirToMove = dirToMove.rotateLeft();
 
 			for (int i = 0; i < 8; ++i) {
+				if(myLocation.add(dirToMove).distanceSquaredTo(personalHQ) <= radiusLimit) {
 				if (rc.canMove(dirToMove)) {
 					rc.move(dirToMove); break;
 				}
-
+}
 				dirToMove = dirToMove.rotateLeft();
 			}
-			}
 		}
-		turnsSinceLastAttack++;
+		if(rc.isCoreReady()) {
+			Nav.goTo(personalHQ);
+		}
 	}
 
 	private static LinkedList<Integer> defendQueue;
@@ -117,11 +96,11 @@ public class Viper extends Bot {
 
 	private static void processSignals() throws GameActionException {
 		IdAndMapLocation newDefend = null, newMove = null; int clearDefend = -1;
-		newDefend = Radio.getDefendLocation(); newMove = Radio.getMoveLocation(); clearDefend = Radio.getClearDefend();
         IdAndMapLocation newHQ = Radio.getMoveCampLocation();                            
         if(newHQ != null) {
             personalHQ = newHQ.location;
-        }
+        }           
+		newDefend = Radio.getDefendLocation(); newMove = Radio.getMoveLocation(); clearDefend = Radio.getClearDefend();
 		while(newDefend != null) {
 			if(teamMemberNeedsHelp[newDefend.id] == 0) {
 				defendQueue.add(newDefend.id);

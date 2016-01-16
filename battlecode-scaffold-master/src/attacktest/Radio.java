@@ -1,5 +1,5 @@
 // class for managing signaling and communication over channels
-package turtletest;
+package attacktest;
 
 import battlecode.common.*;
 import java.util.*;

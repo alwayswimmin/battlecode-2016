@@ -1,4 +1,4 @@
-package turtletest;
+package attacktest;
 
 import battlecode.common.*;
 

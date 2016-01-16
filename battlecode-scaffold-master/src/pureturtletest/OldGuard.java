@@ -1,9 +1,9 @@
-package team074;
+package pureturtletest;
 
 import battlecode.common.*;
 import java.util.LinkedList;
 
-public class Guard extends Bot {
+public class OldGuard extends Bot {
 	public static void run(RobotController _rc) throws GameActionException {
 		Bot.init(_rc);
 		init();
@@ -87,6 +87,10 @@ public class Guard extends Bot {
 
 	private static void processSignals() throws GameActionException {
 		IdAndMapLocation newDefend = null, newMove = null; int clearDefend = -1;
+        IdAndMapLocation newHQ = Radio.getMoveCampLocation();                            
+        if(newHQ != null) {
+            personalHQ = newHQ.location;
+        }           
 		newDefend = Radio.getDefendLocation(); newMove = Radio.getMoveLocation(); clearDefend = Radio.getClearDefend();
 		while(newDefend != null) {
 			if(teamMemberNeedsHelp[newDefend.id] == 0) {
@@ -107,7 +111,6 @@ public class Guard extends Bot {
 	}
 
 	private static void moveSomewhere() throws GameActionException {
-	/*
 		while(!defendQueue.isEmpty()) {
 			int next = defendQueue.element();
 			if(teamMemberNeedsHelp[next] > 0 && rc.getRoundNum() - teamMemberNeedsHelp[next] < 200) {
@@ -118,7 +121,6 @@ public class Guard extends Bot {
 			}
 			defendQueue.remove();
 		}
-	*/
 		if(!moveQueue.isEmpty()) {
 			MapLocation next = moveQueue.element();
 			if(rc.isCoreReady()) {
@@ -129,5 +131,9 @@ public class Guard extends Bot {
 			}
 			return;
 		}
+        if(rc.isCoreReady()) {
+            Nav.goTo(personalHQ);
+            return;
+        }
 	}
 }

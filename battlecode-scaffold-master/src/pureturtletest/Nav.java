@@ -1,4 +1,4 @@
-package team074;
+package pureturtletest;
 
 import battlecode.common.*;
 

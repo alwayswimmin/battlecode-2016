@@ -1,9 +1,9 @@
-package team074;
+package pureturtletest;
 
 import battlecode.common.*;
 import java.util.*;
 
-public class Viper extends Bot {
+public class OldSoldier extends Bot {
 	public static void run(RobotController _rc) throws GameActionException {
 		Bot.init(_rc);
 		init();
@@ -31,30 +31,14 @@ public class Viper extends Bot {
 		processSignals();
 		RobotInfo[] enemiesWithinRange = rc.senseNearbyRobots(ATTACK_RANGE, enemyTeam);
 		RobotInfo[] zombiesWithinRange = rc.senseNearbyRobots(ATTACK_RANGE, Team.ZOMBIE);
-		if (enemiesWithinRange.length > 1) {
+		if (enemiesWithinRange.length > 0) {
 			// Check if weapon is ready
-			for(int i = enemiesWithinRange.length; --i >= 0; ) {
-				if(enemiesWithinRange[i].viperInfectedTurns < 5) {
-					if (rc.isWeaponReady()) {
-						rc.attackLocation(enemiesWithinRange[i].location);
-						turnsSinceLastAttack = 0;
-					}
-				}
-			}
 			if (rc.isWeaponReady()) {
 				rc.attackLocation(enemiesWithinRange[0].location);
 				turnsSinceLastAttack = 0;
 			}
 		} else if (zombiesWithinRange.length > 0) {
 			// Check if weapon is ready
-			for(int i = zombiesWithinRange.length; --i >= 0; ) {
-				if(zombiesWithinRange[i].viperInfectedTurns < 5) {
-					if (rc.isWeaponReady()) {
-						rc.attackLocation(zombiesWithinRange[i].location);
-						turnsSinceLastAttack = 0;
-					}
-				}
-			}
 			if (rc.isWeaponReady()) {
 				rc.attackLocation(zombiesWithinRange[0].location);
 				turnsSinceLastAttack = 0;
@@ -118,6 +102,10 @@ public class Viper extends Bot {
 	private static void processSignals() throws GameActionException {
 		IdAndMapLocation newDefend = null, newMove = null; int clearDefend = -1;
 		newDefend = Radio.getDefendLocation(); newMove = Radio.getMoveLocation(); clearDefend = Radio.getClearDefend();
+		IdAndMapLocation newHQ = Radio.getMoveCampLocation();
+		if(newHQ != null) {
+			personalHQ = newHQ.location;
+		}
 		while(newDefend != null) {
 			if(teamMemberNeedsHelp[newDefend.id] == 0) {
 				defendQueue.add(newDefend.id);
@@ -137,15 +125,17 @@ public class Viper extends Bot {
 	}
 
 	private static void moveSomewhere() throws GameActionException {
-		while(!defendQueue.isEmpty()) {
-			int next = defendQueue.element();
-			if(teamMemberNeedsHelp[next] > 0 && rc.getRoundNum() - teamMemberNeedsHelp[next] < 200) {
-				if(rc.isCoreReady()) {
-					Nav.goTo(teamLocations[next]);
+		if(strategy == 0) {
+			while(!defendQueue.isEmpty()) {
+				int next = defendQueue.element();
+				if(teamMemberNeedsHelp[next] > 0 && rc.getRoundNum() - teamMemberNeedsHelp[next] < 200) {
+					if(rc.isCoreReady()) {
+						Nav.goTo(teamLocations[next]);
+					}
+					return;
 				}
-				return;
+				defendQueue.remove();
 			}
-			defendQueue.remove();
 		}
 		if(!moveQueue.isEmpty()) {
 			MapLocation next = moveQueue.element();
@@ -157,5 +147,9 @@ public class Viper extends Bot {
 			}
 			return;
 		}
+        if(rc.isCoreReady()) {
+            Nav.goTo(personalHQ);
+            return;
+        }
 	}
 }

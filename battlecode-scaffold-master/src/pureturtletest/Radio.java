@@ -1,5 +1,5 @@
 // class for managing signaling and communication over channels
-package team074;
+package pureturtletest;
 
 import battlecode.common.*;
 import java.util.*;
@@ -16,6 +16,7 @@ import java.util.*;
 // 7: defend order
 // 8: clear defend order
 // 9: turret attack order
+// 10: expand turtle order
 // ...
 // 30: unit-specific strategy assignment
 // 31: unit-specific move order
@@ -138,6 +139,14 @@ public class Radio extends Bot {
 		return getLocation(6);
 	}
 
+	public static void broadcastMoveCampLocation(MapLocation dest, int radius) throws GameActionException {
+		broadcastLocation(5, dest, radius);
+	}
+
+	public static IdAndMapLocation getMoveCampLocation() throws GameActionException {
+		return getLocation(5);
+	}
+
 	public static void broadcastDefendLocation(MapLocation dest, int radius) throws GameActionException {
 		broadcastLocation(7, dest, radius);
 	}
@@ -164,6 +173,18 @@ public class Radio extends Bot {
 
 	public static IdAndMapLocation getTurretAttack() throws GameActionException {
 		return getLocation(9);
+	}
+
+	public static void broadcastTurtleExpand(int newSize, int radius) throws GameActionException {
+		broadcast(10, newSize, 0, radius);
+	}
+
+	public static int getTurtleExpand() throws GameActionException {
+		if(channelQueue[10].isEmpty()) {
+			return -1;
+		}
+		MySignal signal = channelQueue[10].remove();
+		return signal.message1;
 	}
 
 	public static void broadcastInitialStrategyRequest(int radius) throws GameActionException {

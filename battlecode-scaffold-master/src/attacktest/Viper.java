@@ -1,9 +1,9 @@
-package turtletest;
+package attacktest;
 
 import battlecode.common.*;
 import java.util.*;
 
-public class Soldier extends Bot {
+public class Viper extends Bot {
 	public static void run(RobotController _rc) throws GameActionException {
 		Bot.init(_rc);
 		init();
@@ -21,8 +21,14 @@ public class Soldier extends Bot {
 		defendQueue = new LinkedList<Integer>();
 		moveQueue = new LinkedList<MapLocation>();
 		Radio.broadcastInitialStrategyRequest(10);
+		MapLocation[] initialEnemyArchonLocations = rc.getInitialArchonLocations(enemyTeam);
+		for(int i = 0; i < initialEnemyArchonLocations.length; ++i) {
+			moveQueue.add(initialEnemyArchonLocations[i]);
+		}
+		ignoreDens = true;
 	}
 
+	private static boolean ignoreDens = false;
 	private static MapLocation defendLocation = null;
 	private static MapLocation attackLocation = null;
 	private static int turnsSinceLastAttack = 100;
@@ -31,17 +37,35 @@ public class Soldier extends Bot {
 		processSignals();
 		RobotInfo[] enemiesWithinRange = rc.senseNearbyRobots(ATTACK_RANGE, enemyTeam);
 		RobotInfo[] zombiesWithinRange = rc.senseNearbyRobots(ATTACK_RANGE, Team.ZOMBIE);
-		if (enemiesWithinRange.length > 0) {
+		if (enemiesWithinRange.length > 1) {
 			// Check if weapon is ready
+			for(int i = enemiesWithinRange.length; --i >= 0; ) {
+				if(enemiesWithinRange[i].viperInfectedTurns < 5) {
+					if (rc.isWeaponReady()) {
+						rc.attackLocation(enemiesWithinRange[i].location);
+						turnsSinceLastAttack = 0;
+					}
+				}
+			}
 			if (rc.isWeaponReady()) {
 				rc.attackLocation(enemiesWithinRange[0].location);
 				turnsSinceLastAttack = 0;
 			}
 		} else if (zombiesWithinRange.length > 0) {
 			// Check if weapon is ready
+			for(int i = zombiesWithinRange.length; --i >= 0; ) {
+				if(zombiesWithinRange[i].viperInfectedTurns < 5) {
+					if (rc.isWeaponReady()) {
+						rc.attackLocation(zombiesWithinRange[i].location);
+						turnsSinceLastAttack = 0;
+					}
+				}
+			}
 			if (rc.isWeaponReady()) {
+				if(ignoreDens && zombiesWithinRange[0].type != RobotType.ZOMBIEDEN) {
 				rc.attackLocation(zombiesWithinRange[0].location);
 				turnsSinceLastAttack = 0;
+				}
 			}
 		}
 		switch(strategy) {
@@ -102,10 +126,10 @@ public class Soldier extends Bot {
 	private static void processSignals() throws GameActionException {
 		IdAndMapLocation newDefend = null, newMove = null; int clearDefend = -1;
 		newDefend = Radio.getDefendLocation(); newMove = Radio.getMoveLocation(); clearDefend = Radio.getClearDefend();
-		IdAndMapLocation newHQ = Radio.getMoveCampLocation();
-		if(newHQ != null) {
-			personalHQ = newHQ.location;
-		}
+        IdAndMapLocation newHQ = Radio.getMoveCampLocation();                            
+        if(newHQ != null) {
+            personalHQ = newHQ.location;
+        }
 		while(newDefend != null) {
 			if(teamMemberNeedsHelp[newDefend.id] == 0) {
 				defendQueue.add(newDefend.id);
@@ -125,17 +149,15 @@ public class Soldier extends Bot {
 	}
 
 	private static void moveSomewhere() throws GameActionException {
-		if(strategy == 0) {
-			while(!defendQueue.isEmpty()) {
-				int next = defendQueue.element();
-				if(teamMemberNeedsHelp[next] > 0 && rc.getRoundNum() - teamMemberNeedsHelp[next] < 200) {
-					if(rc.isCoreReady()) {
-						Nav.goTo(teamLocations[next]);
-					}
-					return;
+		while(!defendQueue.isEmpty()) {
+			int next = defendQueue.element();
+			if(teamMemberNeedsHelp[next] > 0 && rc.getRoundNum() - teamMemberNeedsHelp[next] < 200) {
+				if(rc.isCoreReady()) {
+					Nav.goTo(teamLocations[next]);
 				}
-				defendQueue.remove();
+				return;
 			}
+			defendQueue.remove();
 		}
 		if(!moveQueue.isEmpty()) {
 			MapLocation next = moveQueue.element();

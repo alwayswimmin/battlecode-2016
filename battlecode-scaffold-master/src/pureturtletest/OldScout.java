@@ -1,11 +1,11 @@
-package team074;
+package pureturtletest;
 
 import battlecode.common.*;
 
 import java.util.Random;
 import java.util.LinkedList;
 
-public class Scout extends Bot {
+public class OldScout extends Bot {
 	private static RobotType[] robotsEncountered = new RobotType[32001];
 	private static int[] turnBroadcasted = new int[32001];
 	private static Direction[] directions = {Direction.NORTH, Direction.NORTH_EAST, Direction.EAST, Direction.SOUTH_EAST, Direction.SOUTH, Direction.SOUTH_WEST, Direction.WEST, Direction.NORTH_WEST};
@@ -99,15 +99,15 @@ public class Scout extends Bot {
 				break;
 			case 0:
 				// turret defense
-          for (int i = 0; i < 8; ++i) {
-            if (rc.isCoreReady() && rc.canMove(dirToMove) && myLocation.add(dirToMove).distanceSquaredTo(personalHQ) < radiusLimit) {
-              Nav.goTo(myLocation.add(dirToMove)); break;
-            }                                                                            
-            dirToMove = dirToMove.rotateLeft();
-          }    
-        if(rc.getRoundNum() % 50 == 0) {                                                 
-          radiusLimit++;
-        } 
+				for (int i = 0; i < 8; ++i) {
+					if (rc.isCoreReady() && rc.canMove(dirToMove) && myLocation.add(dirToMove).distanceSquaredTo(personalHQ) < radiusLimit) {
+						Nav.goTo(myLocation.add(dirToMove)); break;
+					}                                                                            
+					dirToMove = dirToMove.rotateLeft();
+				}    
+				if(rc.getRoundNum() % 50 == 0) {                                                 
+					radiusLimit++;
+				} 
 				break;
 			case 1:
 				// move randomly

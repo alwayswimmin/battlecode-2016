@@ -1,4 +1,4 @@
-package turtletest;
+package attacktest;
 
 import battlecode.common.*;
 import java.util.*;
@@ -9,6 +9,7 @@ public class Archon extends Bot {
 	private static Direction forcedMoveDir;
 	private static MapLocation neutralLocation = null;
 	private static MapLocation partsLocation = null;
+	private static LinkedList<MapLocation> moveQueue;
 	private static LinkedList<MapLocation> neutralQueue;
 	private static LinkedList<MapLocation> partsQueue;
 
@@ -50,6 +51,12 @@ public class Archon extends Bot {
 		personalHQ = rc.getLocation();
 		neutralQueue = new LinkedList<MapLocation>();
 		partsQueue = new LinkedList<MapLocation>();
+		
+		moveQueue = new LinkedList<MapLocation>();
+		MapLocation[] initialEnemyArchonLocations = rc.getInitialArchonLocations(enemyTeam);
+		for(int i = 0; i < initialEnemyArchonLocations.length; ++i) {
+			moveQueue.add(initialEnemyArchonLocations[i]);
+		}
 	}
 
 	private static void action() throws GameActionException {
@@ -101,7 +108,7 @@ public class Archon extends Bot {
 			// if enemies, call friends to defend
 			int enemyCount = hostileWithinRange.length;
 			if(turnsSinceEnemySeen > 5) { // waits at least 5 turns between broadcasts
-				Radio.broadcastDefendLocation(myLocation, 1000);
+				// Radio.broadcastDefendLocation(myLocation, 1000); // comment out for all out initial attack
 			}
 			turnsSinceEnemySeen = 0;
 			// finds centroid of visible enemies
@@ -113,7 +120,7 @@ public class Archon extends Bot {
 		} else {
 			turnsSinceEnemySeen++;
 			if(turnsSinceEnemySeen == 15) {
-				Radio.broadcastClearDefend(1000);
+				// Radio.broadcastClearDefend(1000); // comment out for all out initial attack
 			}
 			// if no enemies, send friends to den
 			den = Radio.getDenLocation();
@@ -136,11 +143,7 @@ public class Archon extends Bot {
 		switch(strategy) {
 			case -1:
 				// assign a strategy to Archon
-				if(rc.getTeamParts() >= 300) {
-					strategy = 0;
-				} else {
-					strategy = 1;
-				}
+				strategy = 1;
 				action();
 				break;
 			case 0:
@@ -259,7 +262,8 @@ public class Archon extends Bot {
 				// 3: SOLDIER
 				// 4: TURRET/TTM
 				// 5: VIPER
-				if(unitsOfTypeBuilt[2] < 1 || Math.random() > 0.9){
+				// if(unitsOfTypeBuilt[2] < 1 || Math.random() > 0.9) {
+				if(false) {
 					typeToBuild = 2;
 				} else if(Math.random() > 0.7) {
 					typeToBuild = 5;
@@ -425,6 +429,16 @@ public class Archon extends Bot {
 			}
 			if(rc.canSense(next)) {
 				partsQueue.remove();
+			}
+			return;
+		}
+		if(!moveQueue.isEmpty()) {
+			MapLocation next = moveQueue.element();
+			if(rc.isCoreReady()) {
+				Nav.goTo(next);
+			}
+			if(rc.canSense(next) && rc.senseRobotAtLocation(next) == null) {
+				moveQueue.remove();
 			}
 			return;
 		}
