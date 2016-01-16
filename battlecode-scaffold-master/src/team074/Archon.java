@@ -5,7 +5,7 @@ import java.util.*;
 
 public class Archon extends Bot {
 	private static int scoutsBuilt = 0;
-	private static int forcedMoveCounter = 0; // for when Archon is overidden to move in a specific direction
+	private static int forcedMoveCounter = 0; // when Archon is forced to move in a fixed direction
 	private static Direction forcedMoveDir;
 	private static MapLocation neutralLocation = null;
 	private static MapLocation partsLocation = null;
@@ -31,8 +31,7 @@ public class Archon extends Bot {
 		RobotType.VIPER
 	};
 
-	private static int[] unitsOfTypeBuilt = {1, 0, 0, 0, 0, 0};
-	// includes activation.
+	private static int[] unitsOfTypeBuilt = {1, 0, 0, 0, 0, 0}; // includes activated units
 
 	public static void run(RobotController _rc) throws GameActionException {
 		Bot.init(_rc);
@@ -56,21 +55,34 @@ public class Archon extends Bot {
 		//     makes forced moves if necessary
 		//     heals friends
 		//     processes enemies (and possibly calls to defend)
+		//     strategy 0: builds turrets and scouts
+		//         processes signals
+		//         activates neutrals if possible
+		//         runs away from enemies if necessary
+		//         tries to build new robots
+		//         moves randomly without wandering too far from personal HQ
+		//     strategy 1:
+		//         processes signals
+		//         activates neutrals if possible
+		//         runs away from enemies if necessary
+		//         tries to build new robots
+		//         tries to move to parts and neutrals
+		//         moves randomly
 
 		myLocation = rc.getLocation();
 		if(rc.getRoundNum() == 600) {
 			personalHQ = myLocation;
 		}
 		// make forced moves if forced move counter is non-zero
-		if (forcedMoveCounter > 0 && rc.isCoreReady()) {
+		if(forcedMoveCounter > 0 && rc.isCoreReady()) {
 			forcedMoveCounter--;
-			if (rc.canMove(forcedMoveDir)) {
+			if(rc.canMove(forcedMoveDir)) {
 				rc.move(forcedMoveDir);
 				return;
-			} else if (rc.canMove(forcedMoveDir.rotateLeft())) {
+			} else if(rc.canMove(forcedMoveDir.rotateLeft())) {
 				rc.move(forcedMoveDir.rotateLeft());
 				return;
-			} else if (rc.canMove(forcedMoveDir.rotateRight())) {
+			} else if(rc.canMove(forcedMoveDir.rotateRight())) {
 				rc.move(forcedMoveDir.rotateRight());
 				return;
 			} else {
@@ -83,8 +95,8 @@ public class Archon extends Bot {
 		RobotInfo[] friendWithinRange = rc.senseNearbyRobots(SIGHT_RANGE, rc.getTeam());
 
 		// processes friends and tries to heal them
-		for (int i = 0; i < friendWithinRange.length; ++i) {
-			if (friendWithinRange[i].health != friendWithinRange[i].maxHealth && 
+		for(int i = 0; i < friendWithinRange.length; ++i) {
+			if(friendWithinRange[i].health != friendWithinRange[i].maxHealth && 
 					(ATTACK_RANGE > distanceBetween(rc.getLocation(), friendWithinRange[i].location)) 
 					&& (friendWithinRange[i].type != RobotType.ARCHON)) {
 				rc.repair(friendWithinRange[i].location);
@@ -96,7 +108,7 @@ public class Archon extends Bot {
 		MapLocation enemyCentroid = null;
 
 		if(hostileWithinRange.length != 0) {
-			// if enemies, call friends to defend
+			// if enemies in range, call friends to defend
 			int enemyCount = hostileWithinRange.length;
 			if(turnsSinceEnemySeen > 5) { // waits at least 5 turns between broadcasts
 				Radio.broadcastDefendLocation(myLocation, 1000);
@@ -122,13 +134,12 @@ public class Archon extends Bot {
 
 		// finds neutrals to activate
 		int canActivate = -1;
-		for (int i = 0; i < neutralWithinRange.length; ++i) {
-			if (distanceBetween(rc.getLocation(), neutralWithinRange[i].location) < 3) {
+		for(int i = 0; i < neutralWithinRange.length; ++i) {
+			if(distanceBetween(rc.getLocation(), neutralWithinRange[i].location) < 3) {
 				canActivate = i;
 			}
 		}
 
-		// builds friends
 		int typeToBuild;
 		boolean addedRobot;
 		switch(strategy) {
@@ -149,7 +160,7 @@ public class Archon extends Bot {
 				// 3: SOLDIER
 				// 4: TURRET/TTM
 				// 5: VIPER
-				if(scoutsBuilt++ < 2){
+				if(scoutsBuilt++ < 2){ // incrementing here seems buggy
 					typeToBuild = 4;
 				} else if(Math.random() > 0.8){
 					typeToBuild = 2;
@@ -157,9 +168,9 @@ public class Archon extends Bot {
 					typeToBuild = 4;
 				}
 				addedRobot = false;
-				if (rc.isCoreReady()) {
+				if(rc.isCoreReady()) {
 					// activates neutrals if possible
-					if (canActivate > -1) {
+					if(canActivate > -1) {
 						rc.activate(neutralWithinRange[canActivate].location);
 						switch(neutralWithinRange[canActivate].type) {
 							case ARCHON:
@@ -187,55 +198,65 @@ public class Archon extends Bot {
 						unitsOfTypeBuilt[typeToBuild]++;
 						addedRobot = true;
 					} else if(enemyCentroid != null && !enemyCentroid.equals(myLocation)) {
-						MapLocation dest = new MapLocation(4 * myLocation.x - 3 * enemyCentroid.x, 4 * myLocation.y - 3 * enemyCentroid.y);
+						// if enemies are around, runs away from enemies
+						int dx = myLocation.x - enemyCentroid.x;
+						int dy = myLocation.y - enemyCentroid.y;
+						MapLocation dest = new MapLocation(myLocation.x + 3 * dx, myLocation.y + 3 * dy);
 						boolean[] closeTo = {false, false, false, false};
-
 						Direction goTo = directions[1];
-
-						for (int i = 0; i < 8; i += 2) {
+						for(int i = 0; i < 8; i += 2) {
 							closeTo[i/2] = (distToWall(rc.getLocation(), directions[i]) <= 2);
 						}
-
-						for (int i = 0; i < 4; ++i) {
-							if (closeTo[i] && closeTo[(i+1)%4])
-								goTo = directions[(2*i + 4)%8];
+						for(int i = 0; i < 4; ++i) {
+							if(closeTo[i] && closeTo[(i + 1) % 4]){
+								goTo = directions[(2 * i + 4) % 8];
+							}
 						}
-
 						MapLocation opt1 = new MapLocation(0, 0).add(goTo);
 						MapLocation opt2 = new MapLocation(0, 0).add(goTo.rotateLeft().rotateLeft());
-
-
-						if (goTo != directions[1] && rc.canMove((distanceBetween(opt1, dest) <= distanceBetween(opt2, dest)) ? goTo : goTo.rotateLeft().rotateLeft())) {
-							rc.move((distanceBetween(opt1, dest) <= distanceBetween(opt2, dest)) ? goTo : goTo.rotateLeft().rotateLeft());
-							forcedMoveDir = (distanceBetween(opt1, dest) <= distanceBetween(opt2, dest)) ? goTo : goTo.rotateLeft().rotateLeft();
+						Direction bestDirection;
+						if(distanceBetween(opt1, dest) <= distanceBetween(opt2, dest)){
+							bestDirection = goTo;
+						} else {
+							bestDirection = goTo.rotateLeft().rotateLeft();
+						}
+						if(goTo != directions[1] && rc.canMove(bestDirection)) {
+							rc.move(bestDirection);
+							forcedMoveDir = bestDirection;
 							forcedMoveCounter = 8;
 						} else {
 							Nav.goTo(dest, new SPAll(hostileWithinRange));
 						}
-					} else if (rc.hasBuildRequirements(robotTypes[typeToBuild])) {
+					} else if(rc.hasBuildRequirements(robotTypes[typeToBuild])) {
+						// tries to build new robots
 						Direction dirToBuild = Direction.EAST;
-						for (int i = 0; i < 8; i++) {
-							if ((rc.getRoundNum() <= 20 || rc.getRoundNum() > 600) && rc.canBuild(dirToBuild, robotTypes[typeToBuild]) && (myLocation.add(dirToBuild).x + myLocation.add(dirToBuild).y) % 2 == 1 && rc.getTeamParts() > 131) {
-								rc.build(dirToBuild, robotTypes[typeToBuild]);
-								unitsOfTypeBuilt[typeToBuild]++;
-								addedRobot = true;
-								break;
-							} else {
-								dirToBuild = dirToBuild.rotateLeft();
+						if((rc.getRoundNum() <= 20 || rc.getRoundNum() > 600) && rc.getTeamParts() > 131){
+							for(int i = 0; i < 8; i++) {
+								MapLocation buildLocation = myLocation.add(dirToBuild);
+								if(rc.canBuild(dirToBuild, robotTypes[typeToBuild]) && (buildLocation.x + buildLocation.y) % 2 == 1) {
+									rc.build(dirToBuild, robotTypes[typeToBuild]);
+									unitsOfTypeBuilt[typeToBuild]++;
+									addedRobot = true;
+									break;
+								} else {
+									dirToBuild = dirToBuild.rotateLeft();
+								}
 							}
 						}
 					}
-
+					// moves randomly without wandering too far from personal HQ
 					if(rc.isCoreReady() && personalHQ != null) {
-						if (rc.isCoreReady()) {
+						if(rc.isCoreReady()) {
 							int rot = (int)(Math.random() * 8);
 							Direction dirToMove = Direction.EAST;
-							for (int i = 0; i < rot; ++i)
+							for(int i = 0; i < rot; ++i){
 								dirToMove = dirToMove.rotateLeft();
-
-							for (int i = 0; i < 8; ++i) {
-								if (rc.canMove(dirToMove) && myLocation.add(dirToMove).distanceSquaredTo(personalHQ) < radiusLimit) {
-									Nav.goTo(myLocation.add(dirToMove)); break;
+							}
+							for(int i = 0; i < 8; i++) {
+								MapLocation dest = myLocation.add(dirToMove);
+								if(rc.canMove(dirToMove) && dest.distanceSquaredTo(personalHQ) < radiusLimit) {
+									Nav.goTo(dest);
+									break;
 								}
 								dirToMove = dirToMove.rotateLeft();
 							}
@@ -264,8 +285,9 @@ public class Archon extends Bot {
 					typeToBuild = 3;
 				}
 				addedRobot = false;
-				if (rc.isCoreReady()) {
-					if (canActivate > -1) {
+				if(rc.isCoreReady()) {
+					// activates neutrals if possible
+					if(canActivate > -1) {
 						rc.activate(neutralWithinRange[canActivate].location);
 						switch(neutralWithinRange[canActivate].type) {
 							case ARCHON:
@@ -293,12 +315,16 @@ public class Archon extends Bot {
 						unitsOfTypeBuilt[typeToBuild]++;
 						addedRobot = true;
 					} else if(enemyCentroid != null && !enemyCentroid.equals(myLocation)) {
-						MapLocation dest = new MapLocation(4 * myLocation.x - 3 * enemyCentroid.x, 4 * myLocation.y - 3 * enemyCentroid.y);
+						// if enemies are around, runs away from enemies
+						int dx = myLocation.x - enemyCentroid.x;
+						int dy = myLocation.y - enemyCentroid.y;
+						MapLocation dest = new MapLocation(myLocation.x + 3 * dx, myLocation.y + 3 * dy);
 						Nav.goTo(dest, new SPAll(hostileWithinRange));
-					} else if (typeToBuild != -1 && rc.hasBuildRequirements(robotTypes[typeToBuild]) && (rc.getRoundNum() < 550 || rc.getTeamParts() > 130)) {
+					} else if(typeToBuild != -1 && rc.hasBuildRequirements(robotTypes[typeToBuild]) && (rc.getRoundNum() < 550 || rc.getTeamParts() > 130)) {
+						// tries to build new robots
 						Direction dirToBuild = Direction.EAST;
-						for (int i = 0; i < 8; i++) {
-							if (rc.canBuild(dirToBuild, robotTypes[typeToBuild])) {
+						for(int i = 0; i < 8; i++) {
+							if(rc.canBuild(dirToBuild, robotTypes[typeToBuild])) {
 								rc.build(dirToBuild, robotTypes[typeToBuild]);
 								unitsOfTypeBuilt[typeToBuild]++;
 								addedRobot = true;
@@ -307,7 +333,8 @@ public class Archon extends Bot {
 								dirToBuild = dirToBuild.rotateLeft();
 							}
 						}
-					} else if (rc.isCoreReady()) {
+					} else if(rc.isCoreReady()) {
+						// tries to move to neutrals and parts
 						if(neutralWithinRange.length > 0) {
 							Nav.goTo(neutralWithinRange[0].location);
 						}
@@ -328,17 +355,18 @@ public class Archon extends Bot {
 						}
 					}
 				}
-				if (rc.isCoreReady()) {
+				// moves randomly
+				if(rc.isCoreReady()) {
 					int rot = (int)(Math.random() * 8);
 					Direction dirToMove = Direction.EAST;
-					for (int i = 0; i < rot; ++i)
+					for(int i = 0; i < rot; ++i){
 						dirToMove = dirToMove.rotateLeft();
-
-					for (int i = 0; i < 8; ++i) {
-						if (rc.canMove(dirToMove)) {
-							Nav.goTo(myLocation.add(dirToMove)); break;
+					}
+					for(int i = 0; i < 8; ++i) {
+						if(rc.canMove(dirToMove)) {
+							Nav.goTo(myLocation.add(dirToMove));
+							break;
 						}
-
 						dirToMove = dirToMove.rotateLeft();
 					}
 				}
@@ -399,6 +427,7 @@ public class Archon extends Bot {
 	}
 
 	private static void moveSomewhere() throws GameActionException {
+		// moves towards neutrals and parts received via radio
 		while(!neutralQueue.isEmpty()) {
 			MapLocation next = neutralQueue.element();
 			if(rc.isCoreReady()) {
@@ -426,6 +455,7 @@ public class Archon extends Bot {
 
 
 	private static int determineStrategy(int robotType) throws GameActionException {
+		// determines strategies for requesting robots
 		switch(robotType) {
 			case 0:
 			case 1:
