@@ -17,7 +17,7 @@ public class Soldier extends Bot {
 		}
 	}
 	private static void init() throws GameActionException {
-		// things that run for the first time
+		// initializes Soldier
 		personalHQ = rc.getLocation();
 		defendQueue = new LinkedList<Integer>();
 		moveQueue = new LinkedList<MapLocation>();
@@ -28,18 +28,20 @@ public class Soldier extends Bot {
 	private static MapLocation attackLocation = null;
 	private static int turnsSinceLastAttack = 100;
 	private static void action() throws GameActionException {
-		// take my turn
+		// takes turn in following order:
+		//     processes signals
+		//     looks for enemies and zombies to attack
 		processSignals();
 		RobotInfo[] enemiesWithinRange = rc.senseNearbyRobots(ATTACK_RANGE, enemyTeam);
 		RobotInfo[] zombiesWithinRange = rc.senseNearbyRobots(ATTACK_RANGE, Team.ZOMBIE);
 		if (enemiesWithinRange.length > 0) {
-			// Check if weapon is ready
+			// check if weapon is ready
 			if (rc.isWeaponReady()) {
 				rc.attackLocation(enemiesWithinRange[0].location);
 				turnsSinceLastAttack = 0;
 			}
 		} else if (zombiesWithinRange.length > 0) {
-			// Check if weapon is ready
+			// check if weapon is ready
 			if (rc.isWeaponReady()) {
 				rc.attackLocation(zombiesWithinRange[0].location);
 				turnsSinceLastAttack = 0;
@@ -72,16 +74,16 @@ public class Soldier extends Bot {
 					if(!rc.isCoreReady()) {
 						break;
 					}
-				}
+						}
 			}
 		}
 
-				if(turnsSinceLastAttack >= 2) {
-		if (rc.isCoreReady()) {
-			int rot = (int)(Math.random() * 8);
-			Direction dirToMove = Direction.EAST;
-			for (int i = 0; i < rot; ++i)
-				dirToMove = dirToMove.rotateLeft();
+		if(turnsSinceLastAttack >= 2) {
+			if (rc.isCoreReady()) {
+				int rot = (int)(Math.random() * 8);
+				Direction dirToMove = Direction.EAST;
+				for (int i = 0; i < rot; ++i)
+					dirToMove = dirToMove.rotateLeft();
 
 			for (int i = 0; i < 8; ++i) {
 				if(myLocation.add(dirToMove).distanceSquaredTo(personalHQ) <= radiusLimit) {
