@@ -1,4 +1,3 @@
-
 package attacktest;
 
 import battlecode.common.*;
@@ -16,12 +15,20 @@ public class Soldier extends Bot {
 			Clock.yield();
 		}
 	}
+
+	private static boolean ignoreDens = false;
+
 	private static void init() throws GameActionException {
 		// things that run for the first time
 		personalHQ = rc.getLocation();
 		defendQueue = new LinkedList<Integer>();
 		moveQueue = new LinkedList<MapLocation>();
 		Radio.broadcastInitialStrategyRequest(10);
+		MapLocation[] initialEnemyArchonLocations = rc.getInitialArchonLocations(enemyTeam);
+		for(int i = 0; i < initialEnemyArchonLocations.length; ++i) {
+			moveQueue.add(initialEnemyArchonLocations[i]);
+		}
+		ignoreDens = true;
 	}
 
 	private static MapLocation defendLocation = null;
@@ -41,8 +48,10 @@ public class Soldier extends Bot {
 		} else if (zombiesWithinRange.length > 0) {
 			// Check if weapon is ready
 			if (rc.isWeaponReady()) {
-				rc.attackLocation(zombiesWithinRange[0].location);
-				turnsSinceLastAttack = 0;
+				if(ignoreDens && zombiesWithinRange[0].type != RobotType.ZOMBIEDEN) {
+					rc.attackLocation(zombiesWithinRange[0].location);
+					turnsSinceLastAttack = 0;
+				}
 			}
 		}
 		switch(strategy) {

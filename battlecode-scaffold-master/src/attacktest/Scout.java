@@ -54,6 +54,7 @@ public class Scout extends Bot {
 
 		int broadcastCount = 0;
 
+/*
 		for(int i = zombiesWithinRange.length; --i >= 0; ) {
 			if(broadcastCount < 20 && (robotsEncountered[zombiesWithinRange[i].ID] == null || rc.getRoundNum() - turnBroadcasted[zombiesWithinRange[i].ID] > 100) && zombiesWithinRange[i].type == RobotType.ZOMBIEDEN) {
 				robotsEncountered[zombiesWithinRange[i].ID] = zombiesWithinRange[i].type;
@@ -62,6 +63,7 @@ public class Scout extends Bot {
 				++broadcastCount;
 			}
 		}
+*/
 		/*
 		   if(!denFound && enemiesWithinRange.length != 0) {
 		   Radio.broadcastMoveLocation(enemiesWithinRange[0].location, 1000);

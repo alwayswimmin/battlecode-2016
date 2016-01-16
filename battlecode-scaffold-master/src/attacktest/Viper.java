@@ -21,8 +21,14 @@ public class Viper extends Bot {
 		defendQueue = new LinkedList<Integer>();
 		moveQueue = new LinkedList<MapLocation>();
 		Radio.broadcastInitialStrategyRequest(10);
+		MapLocation[] initialEnemyArchonLocations = rc.getInitialArchonLocations(enemyTeam);
+		for(int i = 0; i < initialEnemyArchonLocations.length; ++i) {
+			moveQueue.add(initialEnemyArchonLocations[i]);
+		}
+		ignoreDens = true;
 	}
 
+	private static boolean ignoreDens = false;
 	private static MapLocation defendLocation = null;
 	private static MapLocation attackLocation = null;
 	private static int turnsSinceLastAttack = 100;
@@ -56,8 +62,10 @@ public class Viper extends Bot {
 				}
 			}
 			if (rc.isWeaponReady()) {
+				if(ignoreDens && zombiesWithinRange[0].type != RobotType.ZOMBIEDEN) {
 				rc.attackLocation(zombiesWithinRange[0].location);
 				turnsSinceLastAttack = 0;
+				}
 			}
 		}
 		switch(strategy) {

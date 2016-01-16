@@ -15,12 +15,20 @@ public class Guard extends Bot {
 			Clock.yield();
 		}
 	}
+
+	private static boolean ignoreDens = false;
+
 	private static void init() throws GameActionException {
 		// things that run for the first time
 		personalHQ = rc.getLocation();
 		defendQueue = new LinkedList<Integer>();
 		moveQueue = new LinkedList<MapLocation>();
 		Radio.broadcastInitialStrategyRequest(10);
+		MapLocation[] initialEnemyArchonLocations = rc.getInitialArchonLocations(enemyTeam);
+		for(int i = 0; i < initialEnemyArchonLocations.length; ++i) {
+			moveQueue.add(initialEnemyArchonLocations[i]);
+		}
+		ignoreDens = true;
 	}
 	private static void action() throws GameActionException {
 		// take my turn
@@ -29,7 +37,9 @@ public class Guard extends Bot {
 		RobotInfo[] zombiesWithinRange = rc.senseNearbyRobots(ATTACK_RANGE, Team.ZOMBIE);
 		if (zombiesWithinRange.length > 0) {
 			if (rc.isWeaponReady()) {
+				if(ignoreDens && zombiesWithinRange[0].type != RobotType.ZOMBIEDEN) {
 				rc.attackLocation(zombiesWithinRange[0].location);
+				}
 			}
 		} else if (enemiesWithinRange.length > 0) {
 			if (rc.isWeaponReady()) {
@@ -40,7 +50,9 @@ public class Guard extends Bot {
 		RobotInfo[] zombiesWithinSightRange = rc.senseNearbyRobots(SIGHT_RANGE, Team.ZOMBIE);
 		if (zombiesWithinRange.length > 0) {
 			if(rc.isCoreReady()) {
+				if(ignoreDens && zombiesWithinRange[0].type != RobotType.ZOMBIEDEN) {
 				Nav.goTo(zombiesWithinSightRange[0].location);
+				}
 			}
 		} else if (enemiesWithinRange.length > 0) {
 			if(rc.isCoreReady()) {
