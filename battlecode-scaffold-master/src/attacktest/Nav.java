@@ -62,64 +62,74 @@ public class Nav extends Bot {
 	private static boolean canMove(Direction dir) {
 		return rc.canMove(dir) && policy.safe(myLocation.add(dir));
 	}
-	// move directly or 45 degrees off. return true if worked.
+	// used to move directly or 45 degrees off. return true if worked.
+	// now moves in best local direction.
 	private static boolean tryMoveDirect() throws GameActionException {
-		if (canMove(toDest)) {
-			move(toDest);
-			dir = toDest;
+		PairDirectionDouble pdd = dfsRubble(myLocation, 0, 0.0, 2, 2000.5);
+
+		if(pdd != null) {
+			Direction mydir = pdd.direction;
+			if (canMove(mydir)) {
+				move(mydir);
+				dir = mydir;
+			} else {
+				rc.clearRubble(mydir);
+			}
+//			System.out.println("trying to go in direction " + mydir);
 			return true;
 		}
+//		System.out.println("couldn't move direct");
 
-		Direction dirLeft = toDest.rotateLeft();
-		Direction dirRight = toDest.rotateRight();
-		if (myLocation.add(dirLeft).distanceSquaredTo(dest) < myLocation.add(dirRight).distanceSquaredTo(dest)) {
-			if (canMove(dirLeft)) {
-				move(dirLeft);
-				dir = dirLeft;
-				return true;
-			}
-			if (canMove(dirRight)) {
-				move(dirRight);
-				dir = dirRight;
-				return true;
-			}
-		} else {
-			if (canMove(dirRight)) {
-				move(dirRight);
-				dir = dirRight;
-				return true;
-			}
-			if (canMove(dirLeft)) {
-				move(dirLeft);
-				dir = dirLeft;
-				return true;
-			}
-		}
-
-		double adjRubble = rc.senseRubble(rc.getLocation().add(toDest));
-
-		if (adjRubble >= 50 && adjRubble < 200) {
-			MapLocation locAfterMove = rc.getLocation().add(toDest);
-			Direction[] nextMoves = {toDest.rotateLeft(), toDest, toDest.rotateRight()};
-
-			if(rc.getType() != RobotType.TTM) {
-				boolean y = false;
-
-				for (int i = 0; i < 3; ++i)
-					for (int j = 0; j < 3; ++j) {
-						if ((dest.equals(locAfterMove.add(nextMoves[i])) || rc.senseRubble(locAfterMove.add(nextMoves[i])) < 50) && rc.onTheMap(locAfterMove.add(nextMoves[i])))
-							y = true;
-						if ((dest.equals(locAfterMove.add(nextMoves[i]).add(nextMoves[j])) || rc.senseRubble(locAfterMove.add(nextMoves[i]).add(nextMoves[j])) < 50) && rc.onTheMap(locAfterMove.add(nextMoves[i]).add(nextMoves[j])))
-							y = true;
-					}
-
-				if (y == true && rc.onTheMap(rc.getLocation().add(toDest))) {
-					rc.clearRubble(toDest);
-					return true;
-				}
-			}
-		}
 		return false;
+	}
+
+	private static class PairDirectionDouble {
+		Direction direction;
+		double d;
+		PairDirectionDouble(Direction _direction, double _d) {
+			direction = _direction;
+			d = _d;
+		}
+	}
+
+	private static PairDirectionDouble dfsRubble(MapLocation curr, int steps, double accumulatedRubble, int stepThreshold, double rubbleThreshold) throws GameActionException {
+		// returns best direction to move in, as determined by least amount of rubble
+		// returns null if no good direction exists
+		// returns Direction.NONE if curr is better than myLocation or if curr is dest
+		if(!rc.onTheMap(curr)) {
+			return null; // can't move here
+		}
+		if(accumulatedRubble > rubbleThreshold) {
+			return null; // too much rubble to go on this path
+		}
+		if(curr.equals(dest)) {
+			return new PairDirectionDouble(Direction.NONE, accumulatedRubble); // found dest
+		}
+		if(rc.isLocationOccupied(curr) && !curr.equals(myLocation)) {
+			return null; // square is blocked, don't count on robot here moving...
+		}
+
+		if(rc.senseRubble(curr) < GameConstants.RUBBLE_OBSTRUCTION_THRESH && curr.distanceSquaredTo(dest) < myLocation.distanceSquaredTo(dest)) {
+			return new PairDirectionDouble(Direction.NONE, accumulatedRubble); // found a path to a square not too costly that is closer
+		}
+
+		if(steps >= stepThreshold) {
+			return null; // couldn't get closer, so end dfs, too costly
+		}
+//		System.out.println("testing square " + curr);
+		Direction mydir = toDest;
+		PairDirectionDouble best = null;
+		boolean turnRight = Math.random() < 0.5;
+		for(int i = 8; --i >= 0;) {
+			MapLocation next = curr.add(mydir);
+			PairDirectionDouble pdd = dfsRubble(next, steps + 1, accumulatedRubble + rc.senseRubble(next), stepThreshold, rubbleThreshold);
+			if(pdd != null && (best == null || pdd.d < best.d - GameConstants.RUBBLE_SLOW_THRESH)) {
+			// dont change from toDest unless you find something significantly better
+				best = new PairDirectionDouble(mydir, pdd.d);
+			}
+			mydir = turnRight ? mydir.rotateRight() : mydir.rotateLeft();
+		}
+		return best;
 	}
 
 	private static void chooseWallDirection() throws GameActionException {

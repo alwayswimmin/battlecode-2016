@@ -25,10 +25,8 @@ public class Viper extends Bot {
 		for(int i = 0; i < initialEnemyArchonLocations.length; ++i) {
 			moveQueue.add(initialEnemyArchonLocations[i]);
 		}
-		ignoreDens = true;
 	}
 
-	private static boolean ignoreDens = false;
 	private static MapLocation defendLocation = null;
 	private static MapLocation attackLocation = null;
 	private static int turnsSinceLastAttack = 100;
@@ -48,24 +46,22 @@ public class Viper extends Bot {
 				}
 			}
 			if (rc.isWeaponReady()) {
-				rc.attackLocation(enemiesWithinRange[0].location);
+				rc.attackLocation(enemiesWithinRange[enemiesWithinRange.length - 1].location);
 				turnsSinceLastAttack = 0;
 			}
 		} else if (zombiesWithinRange.length > 0) {
 			// Check if weapon is ready
 			for(int i = zombiesWithinRange.length; --i >= 0; ) {
-				if(zombiesWithinRange[i].viperInfectedTurns < 5) {
+				// if(zombiesWithinRange[i].viperInfectedTurns < 5) {
 					if (rc.isWeaponReady()) {
 						rc.attackLocation(zombiesWithinRange[i].location);
 						turnsSinceLastAttack = 0;
 					}
-				}
+				// }
 			}
 			if (rc.isWeaponReady()) {
-				if(ignoreDens && zombiesWithinRange[0].type != RobotType.ZOMBIEDEN) {
 				rc.attackLocation(zombiesWithinRange[0].location);
 				turnsSinceLastAttack = 0;
-				}
 			}
 		}
 		switch(strategy) {

@@ -16,8 +16,6 @@ public class Soldier extends Bot {
 		}
 	}
 
-	private static boolean ignoreDens = false;
-
 	private static void init() throws GameActionException {
 		// initializes soldier
 		personalHQ = rc.getLocation();
@@ -26,9 +24,8 @@ public class Soldier extends Bot {
 		Radio.broadcastInitialStrategyRequest(10);
 		MapLocation[] initialEnemyArchonLocations = rc.getInitialArchonLocations(enemyTeam);
 		for(int i = 0; i < initialEnemyArchonLocations.length; ++i) {
-			moveQueue.add(initialEnemyArchonLocations[i]);
+//			 moveQueue.add(initialEnemyArchonLocations[i]);
 		}
-		ignoreDens = true;
 	}
 
 	private static MapLocation defendLocation = null;
@@ -50,10 +47,8 @@ public class Soldier extends Bot {
 		} else if (zombiesWithinRange.length > 0) {
 			// Check if weapon is ready
 			if (rc.isWeaponReady()) {
-				if(ignoreDens && zombiesWithinRange[0].type != RobotType.ZOMBIEDEN) {
-					rc.attackLocation(zombiesWithinRange[0].location);
-					turnsSinceLastAttack = 0;
-				}
+				rc.attackLocation(zombiesWithinRange[0].location);
+				turnsSinceLastAttack = 0;
 			}
 		}
 		switch(strategy) {
@@ -66,7 +61,7 @@ public class Soldier extends Bot {
 			case 0:
 				break;
 			case 1:
-				if(turnsSinceLastAttack >= 2) {
+				if(turnsSinceLastAttack >= 4) {
 					moveSomewhere();
 				}
 				break;
@@ -87,7 +82,7 @@ public class Soldier extends Bot {
 			}
 		}
 		if(rc.isCoreReady()) {
-			RobotInfo[] immediateHostile = rc.senseHostileRobots(myLocation, ATTACK_RANGE);
+			RobotInfo[] immediateHostile = rc.senseHostileRobots(myLocation, SIGHT_RANGE);
 			for(int i = immediateHostile.length; --i >= 0; ) {
 				if(immediateHostile[i].type == RobotType.ARCHON || immediateHostile[i].type == RobotType.ZOMBIEDEN
 						|| immediateHostile[i].type == RobotType.TTM || immediateHostile[i].type == RobotType.TURRET || immediateHostile[i].type == RobotType.SCOUT) {
@@ -99,7 +94,7 @@ public class Soldier extends Bot {
 			}
 		}
 
-		if(turnsSinceLastAttack >= 2) {
+		if(turnsSinceLastAttack >= 4) {
 			if (rc.isCoreReady()) {
 				int rot = (int)(Math.random() * 8);
 				Direction dirToMove = Direction.EAST;
