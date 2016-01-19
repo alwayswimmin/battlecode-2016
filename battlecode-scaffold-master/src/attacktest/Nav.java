@@ -65,20 +65,157 @@ public class Nav extends Bot {
 	// used to move directly or 45 degrees off. return true if worked.
 	// now moves in best local direction.
 	private static boolean tryMoveDirect() throws GameActionException {
-		PairDirectionDouble pdd = dfsRubble(myLocation, 0, 0.0, 2, 2000.5);
-
-		if(pdd != null) {
-			Direction mydir = pdd.direction;
-			if (canMove(mydir)) {
-				move(mydir);
-				dir = mydir;
-			} else {
-				rc.clearRubble(mydir);
-			}
+//		PairDirectionDouble pdd = dfsRubble(myLocation, 0, 0.0, 2, 2000.5);
+//		Direction mydir = dijkstraRubble(2, 2000.5);
+//		if(pdd != null) {
+//			Direction mydir = pdd.direction;
+//		if(mydir != null) {
+//			if (canMove(mydir)) {
+//				move(mydir);
+//				dir = mydir;
+//			} else {
+//				rc.clearRubble(mydir);
+//			}
 //			System.out.println("trying to go in direction " + mydir);
+//			return true;
+//		}
+//		System.out.println("couldn't move direct");
+
+
+        if (canMove(toDest)) {
+            move(toDest);
+			dir = toDest;
+            return true;
+        }
+
+        Direction dirLeft = toDest.rotateLeft();
+        Direction dirRight = toDest.rotateRight();
+        if (myLocation.add(dirLeft).distanceSquaredTo(dest) < myLocation.add(dirRight).distanceSquaredTo(dest)) {
+            if (canMove(dirLeft)) {
+                move(dirLeft);
+				dir = dirLeft;
+                return true;
+            }
+            if (canMove(dirRight)) {
+                move(dirRight);
+				dir = dirRight;
+                return true;
+            }
+        } else {
+            if (canMove(dirRight)) {
+                move(dirRight);
+				dir = dirRight;
+                return true;
+            }
+            if (canMove(dirLeft)) {
+                move(dirLeft);
+				dir = dirLeft;
+                return true;
+            }
+		}
+		double rubbleForward = rc.senseRubble(myLocation.add(toDest));
+		double rubbleLeft = rc.senseRubble(myLocation.add(dirLeft));
+		double rubbleRight = rc.senseRubble(myLocation.add(dirRight));
+		double threshold = 500.5;
+
+		if(rubbleLeft < rubbleForward) {
+			if(rubbleLeft < rubbleRight) {
+				if(rubbleRight < rubbleForward) {
+					// left right forward
+					if(rubbleLeft < threshold && !rc.isLocationOccupied(myLocation.add(dirLeft)) && rc.onTheMap(myLocation.add(dirLeft))) {
+						rc.clearRubble(dirLeft);
+						return true;
+					}
+					if(rubbleRight < threshold && !rc.isLocationOccupied(myLocation.add(dirRight)) && rc.onTheMap(myLocation.add(dirRight))) {
+						rc.clearRubble(dirRight);
+						return true;
+					}
+					if(rubbleForward < threshold && !rc.isLocationOccupied(myLocation.add(toDest)) && rc.onTheMap(myLocation.add(toDest))) {
+						rc.clearRubble(toDest);
+						return true;
+					}
+				} else {
+					// left forward right
+					if(rubbleLeft < threshold && !rc.isLocationOccupied(myLocation.add(dirLeft)) && rc.onTheMap(myLocation.add(dirLeft))) {
+						rc.clearRubble(dirLeft);
+						return true;
+					}
+					if(rubbleForward < threshold && !rc.isLocationOccupied(myLocation.add(toDest)) && rc.onTheMap(myLocation.add(toDest))) {
+						rc.clearRubble(toDest);
+						return true;
+					}
+					if(rubbleRight < threshold && !rc.isLocationOccupied(myLocation.add(dirRight)) && rc.onTheMap(myLocation.add(dirRight))) {
+						rc.clearRubble(dirRight);
+						return true;
+					}
+				}
+			} else {
+				// right left forward
+					if(rubbleRight < threshold && !rc.isLocationOccupied(myLocation.add(dirRight)) && rc.onTheMap(myLocation.add(dirRight))) {
+						rc.clearRubble(dirRight);
+						return true;
+					}
+					if(rubbleLeft < threshold && !rc.isLocationOccupied(myLocation.add(dirLeft)) && rc.onTheMap(myLocation.add(dirLeft))) {
+						rc.clearRubble(dirLeft);
+						return true;
+					}
+					if(rubbleForward < threshold && !rc.isLocationOccupied(myLocation.add(toDest)) && rc.onTheMap(myLocation.add(toDest))) {
+						rc.clearRubble(toDest);
+						return true;
+					}
+			}
+		} else {
+			if(rubbleForward < rubbleRight) {
+				if(rubbleLeft < rubbleRight) {
+					// forward left right
+					if(rubbleForward < threshold && !rc.isLocationOccupied(myLocation.add(toDest)) && rc.onTheMap(myLocation.add(toDest))) {
+						rc.clearRubble(toDest);
+						return true;
+					}
+					if(rubbleLeft < threshold && !rc.isLocationOccupied(myLocation.add(dirLeft)) && rc.onTheMap(myLocation.add(dirLeft))) {
+						rc.clearRubble(dirLeft);
+						return true;
+					}
+					if(rubbleRight < threshold && !rc.isLocationOccupied(myLocation.add(dirRight)) && rc.onTheMap(myLocation.add(dirRight))) {
+						rc.clearRubble(dirRight);
+						return true;
+					}
+				} else {
+					// forward right left
+					if(rubbleForward < threshold && !rc.isLocationOccupied(myLocation.add(toDest)) && rc.onTheMap(myLocation.add(toDest))) {
+						rc.clearRubble(toDest);
+						return true;
+					}
+					if(rubbleRight < threshold && !rc.isLocationOccupied(myLocation.add(dirRight)) && rc.onTheMap(myLocation.add(dirRight))) {
+						rc.clearRubble(dirRight);
+						return true;
+					}
+					if(rubbleLeft < threshold && !rc.isLocationOccupied(myLocation.add(dirLeft)) && rc.onTheMap(myLocation.add(dirLeft))) {
+						rc.clearRubble(dirLeft);
+						return true;
+					}
+				}
+			} else {
+				// right forward left
+					if(rubbleRight < threshold && !rc.isLocationOccupied(myLocation.add(dirRight)) && rc.onTheMap(myLocation.add(dirRight))) {
+						rc.clearRubble(dirRight);
+						return true;
+					}
+					if(rubbleForward < threshold && !rc.isLocationOccupied(myLocation.add(toDest)) && rc.onTheMap(myLocation.add(toDest))) {
+						rc.clearRubble(toDest);
+						return true;
+					}
+					if(rubbleLeft < threshold && !rc.isLocationOccupied(myLocation.add(dirLeft)) && rc.onTheMap(myLocation.add(dirLeft))) {
+						rc.clearRubble(dirLeft);
+						return true;
+					}
+			}
+		}
+
+		if(rc.canSense(dest) && rc.onTheMap(dest) && rubbleForward < 2000.5) {
+			rc.clearRubble(toDest);
 			return true;
 		}
-//		System.out.println("couldn't move direct");
 
 		return false;
 	}
@@ -91,6 +228,73 @@ public class Nav extends Bot {
 			d = _d;
 		}
 	}
+/*
+	private static double[][] dist = new double[11][11];
+	private static boolean[][] visited = new boolean[11][11];
+	private static Direction[][] dirTo = new Direction[11][11];
+	private static MapLocation[][] locations = new MapLocation[11][11];
+	private static double[][] cost = new double[11][11];
+
+	private static Direction dijkstraRubble(int stepThreshold, double rubbleThreshold) throws GameActionException {
+		for(int i = 5 + stepThreshold + 1; --i >= 5 - stepThreshold; ) {
+			for(int j = 5 + stepThreshold + 1; --j >= 5 - stepThreshold; ) {
+				dist[i][j] = rubbleThreshold;
+				visited[i][j] = false;
+				dirTo[i][j] = null;
+				locations[i][j] = new MapLocation(myLocation.x + i - 5, myLocation.y + j - 5);
+				if(!rc.onTheMap(locations[i][j])) {
+					locations[i][j] = null;
+				} else if(!locations[i][j].equals(myLocation) && rc.isLocationOccupied(locations[i][j])) {
+					locations[i][j] = null;
+				} else {
+					cost[i][j] = rc.senseRubble(locations[i][j]);
+				}
+			}
+		}
+		dist[5][5] = 0.0;
+		while(true) {
+			int imin = -1, jmin = -1;
+			for(int i = 5 + stepThreshold + 1; --i >= 5 - stepThreshold; ) {
+				for(int j = 5 + stepThreshold + 1; --j >= 5 - stepThreshold; ) {
+					if(!visited[i][j] && (imin == -1 || dist[i][j] < dist[imin][jmin])) {
+						imin = i;
+						jmin = j;
+					}
+				}
+			}
+			if(imin == -1) {
+				break;
+			}
+			if(dist[imin][jmin] >= rubbleThreshold) {
+				break;
+			}
+			visited[imin][jmin] = true;
+			for(int i = -2; ++i <= 1; ) {
+				for(int j = -2; ++j <= 1; ) {
+					if(visited[imin + i][jmin + j]) {
+						continue;
+					}
+					if(locations[imin + i][jmin + j] == null) {
+						continue;
+					}
+					if(dist[imin + i][jmin + j] > dist[imin][jmin] + cost[imin + i][jmin + j] + 1.0) {
+						dist[imin + i][jmin + j] = dist[imin][jmin] + cost[imin + i][jmin + j] + 1.0;
+						dirTo[imin + i][jmin + j] = dirTo[imin][jmin] == null ? myLocation.directionTo(locations[imin + i][jmin + j]) : dirTo[imin][jmin];
+					}
+				}
+			}
+		}
+		int imin = -1, jmin = -1;
+		for(int i = 5 + stepThreshold + 1; --i >= 5 - stepThreshold; ) {
+			for(int j = 5 + stepThreshold + 1; --j >= 5 - stepThreshold; ) {
+				if((imin == -1 || dist[i][j] < dist[imin][jmin]) && locations[i][j] != null && myLocation.distanceSquaredTo(dest) > locations[i][j].distanceSquaredTo(dest)) {
+					imin = i;
+					jmin = j;
+				}
+			}
+		}
+		return imin == -1 ? null : dirTo[imin][jmin];
+	}
 
 	private static PairDirectionDouble dfsRubble(MapLocation curr, int steps, double accumulatedRubble, int stepThreshold, double rubbleThreshold) throws GameActionException {
 		// returns best direction to move in, as determined by least amount of rubble
@@ -99,7 +303,7 @@ public class Nav extends Bot {
 		if(!rc.onTheMap(curr)) {
 			return null; // can't move here
 		}
-		if(accumulatedRubble > rubbleThreshold) {
+		if(accumulatedRubble >= rubbleThreshold) {
 			return null; // too much rubble to go on this path
 		}
 		if(curr.equals(dest)) {
@@ -131,6 +335,7 @@ public class Nav extends Bot {
 		}
 		return best;
 	}
+*/
 
 	private static void chooseWallDirection() throws GameActionException {
 		Direction leftDir = dir.rotateLeft();
