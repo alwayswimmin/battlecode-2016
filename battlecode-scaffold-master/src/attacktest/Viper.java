@@ -21,9 +21,12 @@ public class Viper extends Bot {
 		defendQueue = new MyQueue<Integer>();
 		moveQueue = new MyQueue<MapLocation>();
 		Radio.broadcastInitialStrategyRequest(10);
-		MapLocation[] initialEnemyArchonLocations = rc.getInitialArchonLocations(enemyTeam);
-		for(int i = 0; i < initialEnemyArchonLocations.length; ++i) {
-			moveQueue.add(initialEnemyArchonLocations[i]);
+		// MapLocation[] initialEnemyArchonLocations = rc.getInitialArchonLocations(enemyTeam);
+		if(rc.getRoundNum() > 600) {
+			MapLocation[] initialEnemyArchonLocations = rc.getInitialArchonLocations(enemyTeam);
+			for(int i = 0; i < initialEnemyArchonLocations.length; ++i) {
+//				 moveQueue.add(initialEnemyArchonLocations[i]);
+			}
 		}
 	}
 
@@ -100,6 +103,25 @@ public class Viper extends Bot {
 			}
 		}
 
+		RobotInfo[] enemiesWithinSightRange = rc.senseNearbyRobots(SIGHT_RANGE, enemyTeam);
+		RobotInfo[] zombiesWithinSightRange = rc.senseNearbyRobots(SIGHT_RANGE, Team.ZOMBIE);
+		// move closer
+		if (zombiesWithinSightRange.length > 0) {
+			if(rc.isCoreReady()) {
+				Nav.goTo(zombiesWithinSightRange[0].location);
+			}
+		} else if (enemiesWithinSightRange.length > 0) {
+			if(rc.isCoreReady()) {
+				Nav.goTo(enemiesWithinSightRange[0].location);
+			}
+		}
+
+		if(rc.getRoundNum() == 600) {
+			MapLocation[] initialEnemyArchonLocations = rc.getInitialArchonLocations(enemyTeam);
+			for(int i = 0; i < initialEnemyArchonLocations.length; ++i) {
+				 moveQueue.add(initialEnemyArchonLocations[i]);
+			}
+		}
 				if(turnsSinceLastAttack >= 2) {
 		if (rc.isCoreReady()) {
 			int rot = (int)(Math.random() * 8);

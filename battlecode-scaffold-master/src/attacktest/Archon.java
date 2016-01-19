@@ -16,6 +16,7 @@ public class Archon extends Bot {
 	private static int radiusLimit = 4;
 	private static IdAndMapLocation den = null;
 	private static int turnsSinceEnemySeen = 100;
+	private static int turnsSinceLastAccompanyOrder = 100;
 
 	// 0: ARCHON
 	// 1: GUARD
@@ -54,7 +55,7 @@ public class Archon extends Bot {
 		moveQueue = new MyQueue<MapLocation>();
 		MapLocation[] initialEnemyArchonLocations = rc.getInitialArchonLocations(enemyTeam);
 		for(int i = 0; i < initialEnemyArchonLocations.length; ++i) {
-			moveQueue.add(initialEnemyArchonLocations[i]);
+//			moveQueue.add(initialEnemyArchonLocations[i]);
 		}
 	}
 
@@ -287,13 +288,14 @@ public class Archon extends Bot {
 				// 3: SOLDIER
 				// 4: TURRET/TTM
 				// 5: VIPER
-				if(unitsOfTypeBuilt[2] < 1 || Math.random() > 0.95) {
+				if((rc.getRoundNum() > 200 || rc.getZombieSpawnSchedule().getRounds()[0] != 0) && (unitsOfTypeBuilt[2] < 1 || Math.random() > 0.95)) {
 					typeToBuild = 2;
 				} else if(Math.random() > 0.80) {
 					typeToBuild = 5;
+					// typeToBuild = 3; // actually don't build vipers for now
 				} else if(Math.random() > 0.85) {
 					// typeToBuild = 1;
-					typeToBuild = 3;
+					typeToBuild = 3; // actually don't build guards for now
 				} else {
 					typeToBuild = 3;
 				}
@@ -350,6 +352,10 @@ public class Archon extends Bot {
 						// tries to move to neutrals and parts
 						if(neutralWithinRange.length > 0) {
 							Nav.goTo(neutralWithinRange[0].location);
+							if(turnsSinceLastAccompanyOrder >= 100) {
+								Radio.broadcastMoveLocation(neutralWithinRange[0].location, 1000);
+								turnsSinceLastAccompanyOrder = 0;
+							}
 						}
 						if(rc.isCoreReady()) {
 							MapLocation[] partsLocations = rc.sensePartLocations(SIGHT_RANGE);
@@ -361,6 +367,10 @@ public class Archon extends Bot {
 									}
 								}
 								Nav.goTo(partsLocations[maxindex]);
+								if(turnsSinceLastAccompanyOrder >= 100) {
+									Radio.broadcastMoveLocation(partsLocations[maxindex], 1000);
+									turnsSinceLastAccompanyOrder = 0;
+								}
 							}
 						}
 						if(rc.isCoreReady()) {
@@ -368,6 +378,7 @@ public class Archon extends Bot {
 						}
 					}
 				}
+				turnsSinceLastAccompanyOrder++;
 				// moves randomly
 				if(rc.isCoreReady()) {
 					int rot = (int)(Math.random() * 8);
@@ -445,6 +456,10 @@ public class Archon extends Bot {
 			MapLocation next = neutralQueue.element();
 			if(rc.isCoreReady()) {
 				Nav.goTo(next);
+				if(turnsSinceLastAccompanyOrder >= 100) {
+					Radio.broadcastMoveLocation(next, 1000);
+					turnsSinceLastAccompanyOrder = 0;
+				}
 			}
 			if(rc.canSense(next)) {
 				neutralQueue.remove();
@@ -455,6 +470,10 @@ public class Archon extends Bot {
 			MapLocation next = partsQueue.element();
 			if(rc.isCoreReady()) {
 				Nav.goTo(next);
+				if(turnsSinceLastAccompanyOrder >= 100) {
+					Radio.broadcastMoveLocation(next, 1000);
+					turnsSinceLastAccompanyOrder = 0;
+				}
 			}
 			if(rc.canSense(next)) {
 				partsQueue.remove();
@@ -465,6 +484,10 @@ public class Archon extends Bot {
 			MapLocation next = moveQueue.element();
 			if(rc.isCoreReady()) {
 				Nav.goTo(next);
+				if(turnsSinceLastAccompanyOrder >= 100) {
+					Radio.broadcastMoveLocation(next, 1000);
+					turnsSinceLastAccompanyOrder = 0;
+				}
 			}
 			if(rc.canSense(next) && rc.senseRobotAtLocation(next) == null) {
 				moveQueue.remove();

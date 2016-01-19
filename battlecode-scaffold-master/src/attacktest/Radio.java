@@ -232,12 +232,25 @@ public class Radio extends Bot {
 		rc.broadcastSignal(radius);
 	}
 
+	public static void broadcastReinforcementRequest(int radius) throws GameActionException {
+		rc.broadcastSignal(radius);
+	}
+
 	public static int getInitialStrategyRequest() throws GameActionException {
 		if(channelQueue[32].isEmpty()) {
 			return -1;
 		}
 		MySignal signal = channelQueue[32].remove();
 		return signal.id;
+
+	}
+
+	public static MapLocation getReinforcementRequest() throws GameActionException {
+		if(channelQueue[32].isEmpty()) {
+			return null;
+		}
+		MySignal signal = channelQueue[32].remove();
+		return signal.location;
 
 	}
 

@@ -42,11 +42,11 @@ public class Guard extends Bot {
 		}
 		RobotInfo[] enemiesWithinSightRange = rc.senseNearbyRobots(SIGHT_RANGE, enemyTeam);
 		RobotInfo[] zombiesWithinSightRange = rc.senseNearbyRobots(SIGHT_RANGE, Team.ZOMBIE);
-		if (zombiesWithinRange.length > 0) {
+		if (zombiesWithinSightRange.length > 0) {
 			if(rc.isCoreReady()) {
 				Nav.goTo(zombiesWithinSightRange[0].location);
 			}
-		} else if (enemiesWithinRange.length > 0) {
+		} else if (enemiesWithinSightRange.length > 0) {
 			if(rc.isCoreReady()) {
 				Nav.goTo(enemiesWithinSightRange[0].location);
 			}

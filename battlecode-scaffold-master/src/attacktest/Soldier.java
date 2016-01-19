@@ -22,10 +22,13 @@ public class Soldier extends Bot {
 		defendQueue = new LinkedList<Integer>();
 		moveQueue = new LinkedList<MapLocation>();
 		Radio.broadcastInitialStrategyRequest(10);
-		MapLocation[] initialEnemyArchonLocations = rc.getInitialArchonLocations(enemyTeam);
-		for(int i = 0; i < initialEnemyArchonLocations.length; ++i) {
-//			 moveQueue.add(initialEnemyArchonLocations[i]);
+/*		if(rc.getRoundNum() > 600) {
+			MapLocation[] initialEnemyArchonLocations = rc.getInitialArchonLocations(enemyTeam);
+			for(int i = 0; i < initialEnemyArchonLocations.length; ++i) {
+				 moveQueue.add(initialEnemyArchonLocations[i]);
+			}
 		}
+		*/
 	}
 
 	private static MapLocation defendLocation = null;
@@ -51,6 +54,8 @@ public class Soldier extends Bot {
 				turnsSinceLastAttack = 0;
 			}
 		}
+		RobotInfo[] enemiesWithinSightRange = rc.senseNearbyRobots(SIGHT_RANGE, enemyTeam);
+		RobotInfo[] zombiesWithinSightRange = rc.senseNearbyRobots(SIGHT_RANGE, Team.ZOMBIE);
 		switch(strategy) {
 			case -1:
 				int channel = Radio.getTuneCommand();
@@ -81,6 +86,8 @@ public class Soldier extends Bot {
 				}
 			}
 		}
+
+		// kite
 		if(rc.isCoreReady()) {
 			RobotInfo[] immediateHostile = rc.senseHostileRobots(myLocation, SIGHT_RANGE);
 			for(int i = immediateHostile.length; --i >= 0; ) {
@@ -94,6 +101,27 @@ public class Soldier extends Bot {
 			}
 		}
 
+		// move closer
+		/*
+		if (zombiesWithinSightRange.length > 0) {
+			if(rc.isCoreReady()) {
+				Nav.goTo(zombiesWithinSightRange[0].location);
+			}
+		} else if (enemiesWithinSightRange.length > 0) {
+			if(rc.isCoreReady()) {
+				Nav.goTo(enemiesWithinSightRange[0].location);
+			}
+		}
+		*/
+
+/*
+		if(rc.getRoundNum() == 600) {
+			MapLocation[] initialEnemyArchonLocations = rc.getInitialArchonLocations(enemyTeam);
+			for(int i = 0; i < initialEnemyArchonLocations.length; ++i) {
+				 moveQueue.add(initialEnemyArchonLocations[i]);
+			}
+		}
+*/
 		if(turnsSinceLastAttack >= 4) {
 			if (rc.isCoreReady()) {
 				int rot = (int)(Math.random() * 8);

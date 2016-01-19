@@ -118,6 +118,8 @@ public class Nav extends Bot {
 		double rubbleRight = rc.senseRubble(myLocation.add(dirRight));
 		double threshold = 500.5;
 
+		if(rc.getType() != RobotType.TTM) {
+
 		if(rubbleLeft < rubbleForward) {
 			if(rubbleLeft < rubbleRight) {
 				if(rubbleRight < rubbleForward) {
@@ -215,6 +217,8 @@ public class Nav extends Bot {
 		if(rc.canSense(dest) && rc.onTheMap(dest) && rubbleForward < 2000.5) {
 			rc.clearRubble(toDest);
 			return true;
+		}
+
 		}
 
 		return false;
