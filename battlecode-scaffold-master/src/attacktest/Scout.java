@@ -3,7 +3,6 @@ package attacktest;
 import battlecode.common.*;
 
 import java.util.Random;
-import java.util.MyQueue;
 
 public class Scout extends Bot {
 	private static RobotType[] robotsEncountered = new RobotType[32001];

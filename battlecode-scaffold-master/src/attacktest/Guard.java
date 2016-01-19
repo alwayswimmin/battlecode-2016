@@ -1,7 +1,6 @@
 package attacktest;
 
 import battlecode.common.*;
-import java.util.MyQueue;
 
 public class Guard extends Bot {
 	public static void run(RobotController _rc) throws GameActionException {
