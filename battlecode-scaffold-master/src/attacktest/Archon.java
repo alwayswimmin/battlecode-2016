@@ -287,12 +287,13 @@ public class Archon extends Bot {
 				// 3: SOLDIER
 				// 4: TURRET/TTM
 				// 5: VIPER
-				if(unitsOfTypeBuilt[2] < 1 || Math.random() > 0.9) {
+				if(unitsOfTypeBuilt[2] < 1 || Math.random() > 0.95) {
 					typeToBuild = 2;
-				} else if(Math.random() > 0.7) {
+				} else if(Math.random() > 0.80) {
 					typeToBuild = 5;
 				} else if(Math.random() > 0.85) {
-					typeToBuild = 1;
+					// typeToBuild = 1;
+					typeToBuild = 3;
 				} else {
 					typeToBuild = 3;
 				}

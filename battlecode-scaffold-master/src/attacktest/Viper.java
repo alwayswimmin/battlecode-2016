@@ -49,6 +49,11 @@ public class Viper extends Bot {
 				rc.attackLocation(enemiesWithinRange[enemiesWithinRange.length - 1].location);
 				turnsSinceLastAttack = 0;
 			}
+		} else if (enemiesWithinRange.length == 1 && enemiesWithinRange[0].type == RobotType.ARCHON) {
+			if (rc.isWeaponReady()) {
+				rc.attackLocation(enemiesWithinRange[enemiesWithinRange.length - 1].location);
+				turnsSinceLastAttack = 0;
+			}
 		} else if (zombiesWithinRange.length > 0) {
 			// Check if weapon is ready
 			for(int i = zombiesWithinRange.length; --i >= 0; ) {
