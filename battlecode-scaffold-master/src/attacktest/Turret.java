@@ -21,8 +21,8 @@ public class Turret extends Bot {
 	private static void init() throws GameActionException {
 		// things that run for the first time
 		personalHQ = rc.getLocation();
-		defendQueue = new LinkedList<Integer>();
-		moveQueue = new LinkedList<MapLocation>();
+		defendQueue = new MyQueue<Integer>();
+		moveQueue = new MyQueue<MapLocation>();
 		rnd = new Random(rc.getID());
 		Radio.broadcastInitialStrategyRequest(10);
 	}
@@ -128,8 +128,8 @@ public class Turret extends Bot {
 	private static Direction randomDirection() {
 		return Direction.values()[(int)(rnd.nextDouble()*8)];
 	}
-	private static LinkedList<Integer> defendQueue;
-	private static LinkedList<MapLocation> moveQueue;
+	private static MyQueue<Integer> defendQueue;
+	private static MyQueue<MapLocation> moveQueue;
 	private static MapLocation[] teamLocations = new MapLocation[32001];
 	private static int[] teamMemberNeedsHelp = new int[32001]; // store what turn request was made
 

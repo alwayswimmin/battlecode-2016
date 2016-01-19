@@ -3,7 +3,7 @@ package attacktest;
 import battlecode.common.*;
 
 import java.util.Random;
-import java.util.LinkedList;
+import java.util.MyQueue;
 
 public class Scout extends Bot {
 	private static RobotType[] robotsEncountered = new RobotType[32001];
@@ -11,7 +11,7 @@ public class Scout extends Bot {
 	private static Direction[] directions = {Direction.NORTH, Direction.NORTH_EAST, Direction.EAST, Direction.SOUTH_EAST, Direction.SOUTH, Direction.SOUTH_WEST, Direction.WEST, Direction.NORTH_WEST};
 	private static Random rand;
 	private static Direction dirToMove;
-	private static LinkedList<MapLocation> locationsPastFewTurns;
+	private static MyQueue<MapLocation> locationsPastFewTurns;
 	private static int myFirstTurn = -1;
 
 	public static void run(RobotController _rc) throws GameActionException {
@@ -31,7 +31,7 @@ public class Scout extends Bot {
 		rand = new Random(rc.getID());
 		dirToMove = directions[rand.nextInt(1000) % 8];
 		personalHQ = rc.getLocation();
-		locationsPastFewTurns = new LinkedList<MapLocation>();
+		locationsPastFewTurns = new MyQueue<MapLocation>();
 	}
 
 	private static RobotInfo[]   friendsWithinRange;

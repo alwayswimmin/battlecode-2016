@@ -9,9 +9,9 @@ public class Archon extends Bot {
 	private static Direction forcedMoveDir;
 	private static MapLocation neutralLocation = null;
 	private static MapLocation partsLocation = null;
-	private static LinkedList<MapLocation> moveQueue;
-	private static LinkedList<MapLocation> neutralQueue;
-	private static LinkedList<MapLocation> partsQueue;
+	private static MyQueue<MapLocation> moveQueue;
+	private static MyQueue<MapLocation> neutralQueue;
+	private static MyQueue<MapLocation> partsQueue;
 
 	private static int radiusLimit = 4;
 	private static IdAndMapLocation den = null;
@@ -48,10 +48,10 @@ public class Archon extends Bot {
 	private static void init() throws GameActionException {
 		// initializes Archon
 		personalHQ = rc.getLocation();
-		neutralQueue = new LinkedList<MapLocation>();
-		partsQueue = new LinkedList<MapLocation>();
+		neutralQueue = new MyQueue<MapLocation>();
+		partsQueue = new MyQueue<MapLocation>();
 		
-		moveQueue = new LinkedList<MapLocation>();
+		moveQueue = new MyQueue<MapLocation>();
 		MapLocation[] initialEnemyArchonLocations = rc.getInitialArchonLocations(enemyTeam);
 		for(int i = 0; i < initialEnemyArchonLocations.length; ++i) {
 			moveQueue.add(initialEnemyArchonLocations[i]);

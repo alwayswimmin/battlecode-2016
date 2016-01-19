@@ -1,7 +1,7 @@
 package attacktest;
 
 import battlecode.common.*;
-import java.util.LinkedList;
+import java.util.MyQueue;
 
 public class Guard extends Bot {
 	public static void run(RobotController _rc) throws GameActionException {
@@ -19,8 +19,8 @@ public class Guard extends Bot {
 	private static void init() throws GameActionException {
 		// things that run for the first time
 		personalHQ = rc.getLocation();
-		defendQueue = new LinkedList<Integer>();
-		moveQueue = new LinkedList<MapLocation>();
+		defendQueue = new MyQueue<Integer>();
+		moveQueue = new MyQueue<MapLocation>();
 		Radio.broadcastInitialStrategyRequest(10);
 		MapLocation[] initialEnemyArchonLocations = rc.getInitialArchonLocations(enemyTeam);
 		for(int i = 0; i < initialEnemyArchonLocations.length; ++i) {
@@ -85,8 +85,8 @@ public class Guard extends Bot {
 		}
 	}
 
-	private static LinkedList<Integer> defendQueue;
-	private static LinkedList<MapLocation> moveQueue;
+	private static MyQueue<Integer> defendQueue;
+	private static MyQueue<MapLocation> moveQueue;
 	private static MapLocation[] teamLocations = new MapLocation[32001];
 	private static int[] teamMemberNeedsHelp = new int[32001]; // store what turn request was made
 
