@@ -108,7 +108,7 @@ public class Radio extends Bot {
 		}
 		enemySignal.clear();
 	}
-
+	
 	public static void broadcast(int channel, int message1, int message2, int radius) throws GameActionException {
 		// broadcasts message to a specified channel
 		// uses 5 bits for channel, 27 bits for message1, and 32 bits for message2

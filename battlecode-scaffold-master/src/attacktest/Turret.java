@@ -12,6 +12,7 @@ public class Turret extends Bot {
 		init();
 		while(true) {
 			myLocation = rc.getLocation();
+			updateHealth();
 			Radio.process();
 			action();
 			Radio.clear();
