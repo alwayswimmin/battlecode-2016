@@ -8,6 +8,7 @@ public class Soldier extends Bot {
 		Bot.init(_rc);
 		init();
 		while(true) {
+			updateHealth();
 			Radio.process();
 			myLocation = rc.getLocation();
 			action();

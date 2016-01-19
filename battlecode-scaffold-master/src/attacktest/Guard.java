@@ -7,6 +7,7 @@ public class Guard extends Bot {
 		Bot.init(_rc);
 		init();
 		while(true) {
+			updateHealth();
 			myLocation = rc.getLocation();
 			Radio.process();
 			action();
