@@ -11,7 +11,6 @@ public class Archon extends Bot {
 	private static MapLocation partsLocation = null;
 	private static LinkedList<MapLocation> neutralQueue;
 	private static LinkedList<MapLocation> partsQueue;
-
 	private static int radiusLimit = 4;
 	private static int expandTimer = 100;
 

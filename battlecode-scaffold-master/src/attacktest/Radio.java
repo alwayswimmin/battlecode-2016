@@ -47,8 +47,9 @@ class IdAndMapLocation {
 class MyQueue {
 	private MySignal[] a;
 	private int l, r;
+
 	public MyQueue() {
-		a = new MySignal[1005];
+		a = new MySignal[100005];
 		l = r = 0;
 	}
 
@@ -73,18 +74,36 @@ class MyQueue {
 	public MySignal get(int x) {
 		return a[l+x];
 	}
+
+	public void clear() {
+		l = r = 0;
+	}
 }
 
 public class Radio extends Bot {
 	public static MyQueue[] channelQueue = new MyQueue[33];
 	public static MyQueue enemySignal;
+	public static boolean hasBeenInit = false;
+
+	public static void firstInit() throws GameActionException {
+		for (int channel = 33; --channel >= 0; )
+			channelQueue[channel] = new MyQueue();
+
+		enemySignal = new MyQueue();
+	}
 
 	public static void init() throws GameActionException {
-		// initializes channel queues
+		//if the queues haven't been initialized, initialize them
+		if (!hasBeenInit)
+			firstInit();
+
+		//now they are initialized!
+		hasBeenInit = true;
+		//clears queues
 		for(int channel = 33; --channel >= 0; ) {
-			channelQueue[channel] = new MyQueue();
+			channelQueue[channel].clear();
 		}
-		enemySignal = new MyQueue();
+		enemySignal.clear();
 	}
 
 	public static void broadcast(int channel, int message1, int message2, int radius) throws GameActionException {
@@ -105,7 +124,8 @@ public class Radio extends Bot {
 		}
 		MySignal signal = channelQueue[channel].remove();
 		MapLocation location = new MapLocation(signal.message1 - 16000, signal.message2 - 16000);
-		return new IdAndMapLocation(signal.id, location);
+		return new IdAndMapLocation(signal.id,
+ location);
 	}
 
 	public static void process() throws GameActionException {
