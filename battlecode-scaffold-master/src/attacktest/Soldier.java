@@ -42,6 +42,12 @@ public class Soldier extends Bot {
 		processSignals();
 		RobotInfo[] enemiesWithinRange = rc.senseNearbyRobots(ATTACK_RANGE, enemyTeam);
 		RobotInfo[] zombiesWithinRange = rc.senseNearbyRobots(ATTACK_RANGE, Team.ZOMBIE);
+		MapLocation toAttack = attackLocation(zombiesWithinRange, enemiesWithinRange, new MapLocation[0]);
+		if(toAttack != null && rc.isWeaponReady()) {
+			rc.attackLocation(toAttack);
+			turnsSinceLastAttack = 0;
+		}
+		/*
 		if (enemiesWithinRange.length > 0) {
 			// Check if weapon is ready
 			if (rc.isWeaponReady()) {
@@ -55,6 +61,8 @@ public class Soldier extends Bot {
 				turnsSinceLastAttack = 0;
 			}
 		}
+		*/
+
 		RobotInfo[] enemiesWithinSightRange = rc.senseNearbyRobots(SIGHT_RANGE, enemyTeam);
 		RobotInfo[] zombiesWithinSightRange = rc.senseNearbyRobots(SIGHT_RANGE, Team.ZOMBIE);
 		switch(strategy) {

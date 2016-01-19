@@ -65,7 +65,7 @@ public class Bot {
 		currentHealth = rc.getHealth();
 	}
 
-	MapLocation attackLocation(RobotInfo[] ZombieInfo, RobotInfo[] EnemyInfo, MapLocation[] ScoutInfo) {
+	public static MapLocation attackLocation(RobotInfo[] ZombieInfo, RobotInfo[] EnemyInfo, MapLocation[] ScoutInfo) {
 		MapLocation attackLocation = null;
 		MapLocation myLocation2 = rc.getLocation();
 		double distanceTo = 1000000000, x;
@@ -158,7 +158,7 @@ public class Bot {
 		for (int i = 0; i < ZombieInfo.length; ++i) {
 			x = distanceBetween(myLocation2, ZombieInfo[i].location);
 
-			if (ZombieInfo[i].type == RobotType.ARCHON && (ATTACK_RANGE >= x)) {
+			if (ZombieInfo[i].type == RobotType.RANGEDZOMBIE && (ATTACK_RANGE >= x)) {
 				if (x < distanceTo) {
 					distanceTo = x;
 					attackLocation = ZombieInfo[i].location;
@@ -172,7 +172,7 @@ public class Bot {
 		for (int i = 0; i < ZombieInfo.length; ++i) {
 			x = distanceBetween(myLocation2, ZombieInfo[i].location);
 
-			if (ZombieInfo[i].type == RobotType.TURRET && (ATTACK_RANGE >= x)) {
+			if (ZombieInfo[i].type == RobotType.FASTZOMBIE && (ATTACK_RANGE >= x)) {
 				if (x < distanceTo) {
 					distanceTo = x;
 					attackLocation = ZombieInfo[i].location;
@@ -186,7 +186,7 @@ public class Bot {
 		for (int i = 0; i < ZombieInfo.length; ++i) {
 			x = distanceBetween(myLocation2, ZombieInfo[i].location);
 
-			if (ZombieInfo[i].type == RobotType.VIPER && (ATTACK_RANGE >= x)) {
+			if (ZombieInfo[i].type == RobotType.BIGZOMBIE && (ATTACK_RANGE >= x)) {
 				if (x < distanceTo) {
 					distanceTo = x;
 					attackLocation = ZombieInfo[i].location;
@@ -200,7 +200,7 @@ public class Bot {
 		for (int i = 0; i < ZombieInfo.length; ++i) {
 			x = distanceBetween(myLocation2, ZombieInfo[i].location);
 
-			if (ZombieInfo[i].type == RobotType.SOLDIER && (ATTACK_RANGE >= x)) {
+			if (ZombieInfo[i].type == RobotType.STANDARDZOMBIE && (ATTACK_RANGE >= x)) {
 				if (x < distanceTo) {
 					distanceTo = x;
 					attackLocation = ZombieInfo[i].location;
@@ -214,7 +214,7 @@ public class Bot {
 		for (int i = 0; i < ZombieInfo.length; ++i) {
 			x = distanceBetween(myLocation2, ZombieInfo[i].location);
 
-			if (ZombieInfo[i].type == RobotType.GUARD && (ATTACK_RANGE >= x)) {
+			if (ZombieInfo[i].type == RobotType.ZOMBIEDEN && (ATTACK_RANGE >= x)) {
 				if (x < distanceTo) {
 					distanceTo = x;
 					attackLocation = ZombieInfo[i].location;
