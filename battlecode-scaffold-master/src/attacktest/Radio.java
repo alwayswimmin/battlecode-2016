@@ -44,12 +44,12 @@ class IdAndMapLocation {
 	}
 }
 
-class MyQueue {
-	private MySignal[] a;
-	private int l, r;
+class MyQueue<E> {
+	private E[] a;
+	private int l, r, arraySize = 10005;
 
 	public MyQueue() {
-		a = new MySignal[100005];
+		a = (E[]) (new Object[arraySize]);
 		l = r = 0;
 	}
 
@@ -61,35 +61,38 @@ class MyQueue {
 		return (r == l);
 	}
 
-	public void add(MySignal m) {
-		a[r] = m; r++;
+	public void add(E m) {
+		a[r % arraySize] = m; r++;
 	}
 
-	public MySignal remove() {
+	public E remove() {
 		assert(l < r);
 		l++;
-		return (a[l-1]);
+		return (a[(l-1) % arraySize]);
 	}
 
-	public MySignal get(int x) {
-		return a[l+x];
+	public E get(int x) {
+		return a[(l+x) % arraySize];
 	}
 
 	public void clear() {
 		l = r = 0;
 	}
+	public E element() {
+		return get(0);
+	}
 }
 
 public class Radio extends Bot {
-	public static MyQueue[] channelQueue = new MyQueue[33];
-	public static MyQueue enemySignal;
+	public static MyQueue<MySignal>[] channelQueue = new MyQueue[33];
+	public static MyQueue<MySignal> enemySignal;
 	public static boolean hasBeenInit = false;
 
 	public static void firstInit() throws GameActionException {
 		for (int channel = 33; --channel >= 0; )
-			channelQueue[channel] = new MyQueue();
+			channelQueue[channel] = new MyQueue<MySignal>();
 
-		enemySignal = new MyQueue();
+		enemySignal = new MyQueue<MySignal>();
 	}
 
 	public static void init() throws GameActionException {
