@@ -135,7 +135,8 @@ public class Radio extends Bot {
 	public static void process() throws GameActionException {
 		// processes all new signals and assigns them to channels
 		Signal[] incomingSignals = rc.emptySignalQueue();
-		for(int i = incomingSignals.length; --i >= 0; ) {
+		int arrLength = incomingSignals.length;
+		for(int i = 0; i < arrLength && i < 50; ++i) {
 			int id = incomingSignals[i].getID();
 			MapLocation location = incomingSignals[i].getLocation();
 			int[] message = incomingSignals[i].getMessage();

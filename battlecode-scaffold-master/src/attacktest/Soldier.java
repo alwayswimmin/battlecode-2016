@@ -132,21 +132,32 @@ public class Soldier extends Bot {
 		}
 */
 		if(turnsSinceLastAttack >= 4) {
-			if(rc.getRoundNum() % 5 == 0) {
+//			if(rc.getRoundNum() % 5 == 0) {
 				tighten();
-			}
-			if (rc.isCoreReady()) {
-				int rot = (int)(Math.random() * 8);
-				Direction dirToMove = Direction.EAST;
-				for (int i = 0; i < rot; ++i)
-					dirToMove = dirToMove.rotateLeft();
-
-				for (int i = 0; i < 8; ++i) {
-					if (rc.canMove(dirToMove)) {
-						rc.move(dirToMove); break;
-					}
-
-					dirToMove = dirToMove.rotateLeft();
+//			}
+//			if (rc.getRoundNum() % 5 == 3 && rc.isCoreReady()) {
+//				int rot = (int)(Math.random() * 8);
+//				Direction dirToMove = Direction.EAST;
+//				for (int i = 0; i < rot; ++i)
+//					dirToMove = dirToMove.rotateLeft();
+//
+//				for (int i = 0; i < 8; ++i) {
+//					if (rc.canMove(dirToMove)) {
+//						rc.move(dirToMove); break;
+//					}
+//
+//					dirToMove = dirToMove.rotateLeft();
+//				}
+//			}
+		}
+		if(rc.isCoreReady()) {
+			// if idle, clear some rubble
+			Direction dirToClear = Direction.EAST;
+			for(int k = 0; k < 8; ++k) {
+				MapLocation target = myLocation.add(dirToClear);
+				if(rc.isCoreReady() && rc.senseRubble(target) >= GameConstants.RUBBLE_SLOW_THRESH) {
+					rc.clearRubble(dirToClear);
+//					System.out.println("looking for rubble to clear");
 				}
 			}
 		}

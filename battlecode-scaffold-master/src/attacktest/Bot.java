@@ -180,20 +180,6 @@ public class Bot {
 			for (int i = 0; i < ZombieInfo.length; ++i) {
 				x = distanceBetween(myLocation2, ZombieInfo[i].location);
 
-				if (ZombieInfo[i].type == RobotType.BIGZOMBIE && (ATTACK_RANGE >= x && GameConstants.TURRET_MINIMUM_RANGE <= x)) {
-					if (x < distanceTo) {
-						distanceTo = x;
-						attackLocation = ZombieInfo[i].location;
-					}
-				}
-			}
-
-			if (attackLocation != null)
-				return attackLocation;
-
-			for (int i = 0; i < ZombieInfo.length; ++i) {
-				x = distanceBetween(myLocation2, ZombieInfo[i].location);
-
 				if (ZombieInfo[i].type == RobotType.STANDARDZOMBIE && (ATTACK_RANGE >= x && GameConstants.TURRET_MINIMUM_RANGE <= x)) {
 					if (x < distanceTo) {
 						distanceTo = x;
@@ -205,6 +191,20 @@ public class Bot {
 			if (attackLocation != null)
 				return attackLocation;
 			
+			for (int i = 0; i < ZombieInfo.length; ++i) {
+				x = distanceBetween(myLocation2, ZombieInfo[i].location);
+
+				if (ZombieInfo[i].type == RobotType.BIGZOMBIE && (ATTACK_RANGE >= x && GameConstants.TURRET_MINIMUM_RANGE <= x)) {
+					if (x < distanceTo) {
+						distanceTo = x;
+						attackLocation = ZombieInfo[i].location;
+					}
+				}
+			}
+
+			if (attackLocation != null)
+				return attackLocation;
+
 			if(!prioritizeArchon) {
 
 				for (int i = 0; i < EnemyInfo.length; ++i) {
@@ -390,20 +390,6 @@ public class Bot {
 			for (int i = 0; i < ZombieInfo.length; ++i) {
 				x = distanceBetween(myLocation2, ZombieInfo[i].location);
 
-				if (ZombieInfo[i].type == RobotType.BIGZOMBIE && (ATTACK_RANGE >= x)) {
-					if (x < distanceTo) {
-						distanceTo = x;
-						attackLocation = ZombieInfo[i].location;
-					}
-				}
-			}
-
-			if (attackLocation != null)
-				return attackLocation;
-
-			for (int i = 0; i < ZombieInfo.length; ++i) {
-				x = distanceBetween(myLocation2, ZombieInfo[i].location);
-
 				if (ZombieInfo[i].type == RobotType.STANDARDZOMBIE && (ATTACK_RANGE >= x)) {
 					if (x < distanceTo) {
 						distanceTo = x;
@@ -415,6 +401,20 @@ public class Bot {
 			if (attackLocation != null)
 				return attackLocation;
 			
+			for (int i = 0; i < ZombieInfo.length; ++i) {
+				x = distanceBetween(myLocation2, ZombieInfo[i].location);
+
+				if (ZombieInfo[i].type == RobotType.BIGZOMBIE && (ATTACK_RANGE >= x)) {
+					if (x < distanceTo) {
+						distanceTo = x;
+						attackLocation = ZombieInfo[i].location;
+					}
+				}
+			}
+
+			if (attackLocation != null)
+				return attackLocation;
+
 			if(!prioritizeArchon) {
 
 				for (int i = 0; i < EnemyInfo.length; ++i) {
