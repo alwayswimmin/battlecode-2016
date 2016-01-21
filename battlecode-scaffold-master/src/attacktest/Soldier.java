@@ -83,6 +83,16 @@ public class Soldier extends Bot {
 				break;
 		}
 
+		double maxHealth = RobotType.SOLDIER.maxHealth;
+		if(rc.isCoreReady() && rc.getInfectedTurns() != 0 && rc.getHealth() < 0.5 * maxHealth) {
+			RobotInfo[] surroundingHostile = rc.senseNearbyRobots(SIGHT_RANGE, enemyTeam);
+			if(surroundingHostile.length != 0) {
+				Nav.goTo(surroundingHostile[0].location);
+			} else {
+				Nav.goTo(rc.getInitialArchonLocations(enemyTeam)[0]);
+			}
+		}
+
 		// kite
 		if(rc.isCoreReady()) {
 			RobotInfo[] immediateHostile = rc.senseHostileRobots(myLocation, 4);
