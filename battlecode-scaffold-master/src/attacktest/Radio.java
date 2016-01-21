@@ -16,6 +16,7 @@ import java.util.*;
 // 7: defend order
 // 8: clear defend order
 // 9: turret attack order
+// 10: enemy archon encountered
 // ...
 // 30: unit-specific strategy assignment
 // 31: unit-specific move order
@@ -168,6 +169,14 @@ public class Radio extends Bot {
 		return getLocation(2);
 	}
 
+	public static void broadcastEnemyArchonLocation(MapLocation archonLocation, int radius) throws GameActionException {
+		broadcastLocation(10, archonLocation, radius);
+	}
+
+	public static IdAndMapLocation getEnemyArchonLocation() throws GameActionException {
+		return getLocation(10);
+	}
+	
 	public static void broadcastNeutralLocation(MapLocation neutralLocation, int radius) throws GameActionException {
 		broadcastLocation(3, neutralLocation, radius);
 	}
