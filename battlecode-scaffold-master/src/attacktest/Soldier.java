@@ -132,6 +132,9 @@ public class Soldier extends Bot {
 		}
 */
 		if(turnsSinceLastAttack >= 4) {
+			if(rc.getRoundNum() % 5 == 0) {
+				tighten();
+			}
 			if (rc.isCoreReady()) {
 				int rot = (int)(Math.random() * 8);
 				Direction dirToMove = Direction.EAST;

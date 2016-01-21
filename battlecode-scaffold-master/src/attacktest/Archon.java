@@ -298,8 +298,8 @@ public class Archon extends Bot {
 				if((rc.getRoundNum() > 200 || rc.getZombieSpawnSchedule().getRounds()[0] != 0) && (unitsOfTypeBuilt[2] < 1 || Math.random() > 0.95)) {
 					typeToBuild = 2;
 				} else if(Math.random() > 0.80) {
-					// typeToBuild = 5;
-					typeToBuild = 3; // actually don't build vipers for now
+					typeToBuild = 5;
+					// typeToBuild = 3; // actually don't build vipers for now
 				} else if(rc.getRoundNum() > 300 && Math.random() > 0.70) {
 					// typeToBuild = 1;
 					typeToBuild = 3; // actually don't build guards for now
@@ -501,9 +501,9 @@ public class Archon extends Bot {
 			}
 			return;
 		}
-		if(den != null) {
-			Nav.goTo(den.location);
-		}
+//		if(den != null) {
+//			Nav.goTo(den.location);
+//		}
 	}
 
 
