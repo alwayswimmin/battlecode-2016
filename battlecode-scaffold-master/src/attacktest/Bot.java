@@ -162,7 +162,7 @@ public class Bot {
 
 			if (attackLocation != null)
 				return attackLocation;
-
+/*
 			for (int i = 0; i < ZombieInfo.length; ++i) {
 				x = distanceBetween(myLocation2, ZombieInfo[i].location);
 
@@ -204,7 +204,24 @@ public class Bot {
 
 			if (attackLocation != null)
 				return attackLocation;
+*/
+// instead, just use default zombie attacks except for ranged
+			
+			for (int i = 0; i < ZombieInfo.length; ++i) {
+				x = distanceBetween(myLocation2, ZombieInfo[i].location);
 
+				if (ATTACK_RANGE >= x && GameConstants.TURRET_MINIMUM_RANGE <= x) {
+					if (x < distanceTo) {
+						distanceTo = x;
+						attackLocation = ZombieInfo[i].location;
+					}
+				}
+			}
+
+			if (attackLocation != null)
+				return attackLocation;
+
+// --end modification--
 			if(!prioritizeArchon) {
 
 				for (int i = 0; i < EnemyInfo.length; ++i) {
@@ -372,7 +389,7 @@ public class Bot {
 
 			if (attackLocation != null)
 				return attackLocation;
-
+/*
 			for (int i = 0; i < ZombieInfo.length; ++i) {
 				x = distanceBetween(myLocation2, ZombieInfo[i].location);
 
@@ -414,6 +431,25 @@ public class Bot {
 
 			if (attackLocation != null)
 				return attackLocation;
+*/
+
+// instead, just use default zombie attacks except for ranged
+			
+			for (int i = 0; i < ZombieInfo.length; ++i) {
+				x = distanceBetween(myLocation2, ZombieInfo[i].location);
+
+				if (ATTACK_RANGE >= x) {
+					if (x < distanceTo) {
+						distanceTo = x;
+						attackLocation = ZombieInfo[i].location;
+					}
+				}
+			}
+
+			if (attackLocation != null)
+				return attackLocation;
+
+// --end modification--
 
 			if(!prioritizeArchon) {
 

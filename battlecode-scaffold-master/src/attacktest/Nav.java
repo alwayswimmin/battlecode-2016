@@ -213,11 +213,20 @@ public class Nav extends Bot {
 					}
 			}
 		}
+			
+			boolean goodSpotFound = false;
+			MapLocation[] neighborhood = MapLocation.getAllMapLocationsWithinRadiusSq(myLocation, SIGHT_RANGE);
+			for(int k = neighborhood.length; --k >= 0; ) {
+				if(rc.onTheMap(neighborhood[k]) && rc.senseRubble(neighborhood[k]) < threshold && neighborhood[k].distanceSquaredTo(dest) < myLocation.distanceSquaredTo(dest)) {
+					goodSpotFound = true;
+					break;
+				}
+			}
 
-		if(rc.canSense(dest) && rc.onTheMap(dest) && rubbleForward < 2000.5) {
-			rc.clearRubble(toDest);
-			return true;
-		}
+			if((goodSpotFound || rc.canSense(dest)) && rc.onTheMap(myLocation.add(toDest)) && rubbleForward < 2000.5) {
+				rc.clearRubble(toDest);
+				return true;
+			}
 
 		}
 

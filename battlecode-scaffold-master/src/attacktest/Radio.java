@@ -17,6 +17,7 @@ import java.util.*;
 // 8: clear defend order
 // 9: turret attack order
 // 10: enemy archon encountered
+// 11: clear all orders, start fresh
 // ...
 // 30: unit-specific strategy assignment
 // 31: unit-specific move order
@@ -285,10 +286,24 @@ public class Radio extends Bot {
 			return -1;
 		}
 		MySignal signal = channelQueue[0].remove();
-		if(signal.message1 == ID) {
-			return signal.message2;
-		} else {
+		while(signal.message1 != ID && !channelQueue[11].isEmpty()) {
+			signal = channelQueue[0].remove();
+		}
+		if(signal.message1 != ID) {
 			return -1;
 		}
+		return signal.message2;
+	}
+
+	public static void broadcastClear(int radius) throws GameActionException {
+		broadcast(11, 0, 0, radius);
+	}
+
+	public static int getClear() throws GameActionException {
+		if(channelQueue[11].isEmpty()) {
+			return -1;
+		}
+		MySignal signal = channelQueue[11].remove();
+		return signal.id;
 	}
 }

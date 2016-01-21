@@ -17,6 +17,7 @@ public class Archon extends Bot {
 	private static IdAndMapLocation den = null;
 	private static IdAndMapLocation enemyArchon = null;
 	private static int turnsSinceEnemySeen = 100;
+	private static int consecutiveTurnsOfEnemy = 0;
 	private static int turnsSinceLastAccompanyOrder = 100;
 
 	// 0: ARCHON
@@ -84,12 +85,13 @@ public class Archon extends Bot {
 		if(rc.getRoundNum() == 600) {
 			personalHQ = myLocation;
 		}
-//		if(rc.getRoundNum() == 1000) {
-//			MapLocation[] initialEnemyArchonLocations = rc.getInitialArchonLocations(enemyTeam);
-//			for(int i = 0; i < initialEnemyArchonLocations.length; ++i) {
-//				moveQueue.add(initialEnemyArchonLocations[i]);
-//			}
-//		}
+		if(rc.getRoundNum() == 2000) {
+			MapLocation[] initialEnemyArchonLocations = rc.getInitialArchonLocations(enemyTeam);
+			for(int i = 0; i < initialEnemyArchonLocations.length; ++i) {
+				Radio.broadcastMoveLocation(initialEnemyArchonLocations[i], 1000);
+				moveQueue.add(initialEnemyArchonLocations[i]);
+			}
+		}
 		// make forced moves if forced move counter is non-zero
 		if(forcedMoveCounter > 0 && rc.isCoreReady()) {
 			forcedMoveCounter--;
@@ -131,6 +133,7 @@ public class Archon extends Bot {
 				Radio.broadcastDefendLocation(myLocation, 1000);
 			}
 			turnsSinceEnemySeen = 0;
+			consecutiveTurnsOfEnemy++;
 			// finds centroid of visible enemies
 			for(int i = enemyCount; --i >= 0; ) {
 				enemyCentroidX += hostileWithinRange[i].location.x;
@@ -139,6 +142,7 @@ public class Archon extends Bot {
 			enemyCentroid = new MapLocation(enemyCentroidX / enemyCount, enemyCentroidY / enemyCount);
 		} else {
 			turnsSinceEnemySeen++;
+			consecutiveTurnsOfEnemy = 0;
 			if(turnsSinceEnemySeen == 15) {
 				Radio.broadcastClearDefend(1000);
 			}
@@ -314,13 +318,17 @@ public class Archon extends Bot {
 				// 5: VIPER
 				if((rc.getRoundNum() > 200 || rc.getZombieSpawnSchedule().getRounds()[0] != 0) && (unitsOfTypeBuilt[2] < 1 || Math.random() > 0.95)) {
 					typeToBuild = 2;
-				} else if(Math.random() > 0.80) {
-					// typeToBuild = 5;
-					typeToBuild = 3; // actually don't build vipers for now
+				} else if(Math.random() > 0.85) {
+					typeToBuild = 5;
+					// typeToBuild = 3; // actually don't build vipers for now
 				} else if(rc.getRoundNum() > 300 && Math.random() > 0.70) {
 					// typeToBuild = 1;
 					typeToBuild = 3; // actually don't build guards for now
 				} else {
+					typeToBuild = 3;
+				}
+				boolean runAwayOverride = consecutiveTurnsOfEnemy % 20 > 15;
+				if(runAwayOverride) {
 					typeToBuild = 3;
 				}
 				addedRobot = false;
@@ -353,7 +361,7 @@ public class Archon extends Bot {
 						}
 						unitsOfTypeBuilt[typeToBuild]++;
 						addedRobot = true;
-					} else if(enemyCentroid != null && !enemyCentroid.equals(myLocation)) {
+					} else if(!runAwayOverride && enemyCentroid != null && !enemyCentroid.equals(myLocation)) {
 						// if enemies are around, runs away from enemies
 						int dx = myLocation.x - enemyCentroid.x;
 						int dy = myLocation.y - enemyCentroid.y;

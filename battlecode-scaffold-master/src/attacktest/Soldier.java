@@ -132,23 +132,23 @@ public class Soldier extends Bot {
 		}
 */
 		if(turnsSinceLastAttack >= 4) {
-//			if(rc.getRoundNum() % 5 == 0) {
+			if(rc.getRoundNum() % 5 != 3) {
 				tighten();
-//			}
-//			if (rc.getRoundNum() % 5 == 3 && rc.isCoreReady()) {
-//				int rot = (int)(Math.random() * 8);
-//				Direction dirToMove = Direction.EAST;
-//				for (int i = 0; i < rot; ++i)
-//					dirToMove = dirToMove.rotateLeft();
-//
-//				for (int i = 0; i < 8; ++i) {
-//					if (rc.canMove(dirToMove)) {
-//						rc.move(dirToMove); break;
-//					}
-//
-//					dirToMove = dirToMove.rotateLeft();
-//				}
-//			}
+			}
+			if (rc.getRoundNum() % 5 == 3 && rc.isCoreReady()) {
+				int rot = (int)(Math.random() * 8);
+				Direction dirToMove = Direction.EAST;
+				for (int i = 0; i < rot; ++i)
+					dirToMove = dirToMove.rotateLeft();
+
+				for (int i = 0; i < 8; ++i) {
+					if (rc.canMove(dirToMove)) {
+						rc.move(dirToMove); break;
+					}
+
+					dirToMove = dirToMove.rotateLeft();
+				}
+			}
 		}
 		if(rc.isCoreReady()) {
 			// if idle, clear some rubble
@@ -170,8 +170,8 @@ public class Soldier extends Bot {
 	private static int[] teamMemberNeedsHelp = new int[32001]; // store what turn request was made
 
 	private static void processSignals() throws GameActionException {
-		IdAndMapLocation newDefend = null, newMove = null; int clearDefend = -1;
-		newDefend = Radio.getDefendLocation(); newMove = Radio.getMoveLocation(); clearDefend = Radio.getClearDefend();
+		IdAndMapLocation newDefend = null, newMove = null; int clearDefend = -1; int clearOrders = -1;
+		newDefend = Radio.getDefendLocation(); newMove = Radio.getMoveLocation(); clearDefend = Radio.getClearDefend(); clearOrders = Radio.getClear();
 		IdAndMapLocation newHQ = Radio.getMoveCampLocation();
 		if(newHQ != null) {
 			personalHQ = newHQ.location;
@@ -191,6 +191,9 @@ public class Soldier extends Bot {
 		while(clearDefend != -1) {
 			teamMemberNeedsHelp[clearDefend] = 0;
 			clearDefend = Radio.getClearDefend();
+		}
+		while(clearOrders != -1) {
+			break; // not implemented yet
 		}
 	}
 
