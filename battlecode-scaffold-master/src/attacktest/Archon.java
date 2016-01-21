@@ -49,6 +49,8 @@ public class Archon extends Bot {
 		}
 	}
 
+	private static boolean shouldBuildScoutsInitially = true;
+
 	private static void init() throws GameActionException {
 		// initializes Archon
 		personalHQ = rc.getLocation();
@@ -56,9 +58,15 @@ public class Archon extends Bot {
 		partsQueue = new MyQueue<MapLocation>();
 		
 		moveQueue = new MyQueue<MapLocation>();
+
 		MapLocation[] initialEnemyArchonLocations = rc.getInitialArchonLocations(enemyTeam);
 		for(int i = 0; i < initialEnemyArchonLocations.length; ++i) {
-//			moveQueue.add(initialEnemyArchonLocations[i]);
+			if(initialEnemyArchonLocations[i].distanceSquaredTo(myLocation) < 200) {
+				shouldBuildScoutsInitially = false;
+			}
+		}
+		if(rc.getZombieSpawnSchedule().getRounds()[0] < 100) {
+			shouldBuildScoutsInitially = false;
 		}
 	}
 
@@ -316,7 +324,7 @@ public class Archon extends Bot {
 				// 3: SOLDIER
 				// 4: TURRET/TTM
 				// 5: VIPER
-				if((rc.getRoundNum() > 200 || rc.getZombieSpawnSchedule().getRounds()[0] != 0) && (unitsOfTypeBuilt[2] < 1 || Math.random() > 0.95)) {
+				if((rc.getRoundNum() > 200 || shouldBuildScoutsInitially) && (unitsOfTypeBuilt[2] < 1 || Math.random() > 0.95)) {
 					typeToBuild = 2;
 				} else if(Math.random() > 0.85) {
 					typeToBuild = 5;
