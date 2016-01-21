@@ -16,7 +16,6 @@ import java.util.*;
 // 7: defend order
 // 8: clear defend order
 // 9: turret attack order
-// 10: expand turtle order
 // ...
 // 30: unit-specific strategy assignment
 // 31: unit-specific move order
@@ -45,18 +44,71 @@ class IdAndMapLocation {
 	}
 }
 
-public class Radio extends Bot {
-	public static Queue<MySignal>[] channelQueue = new Queue[33];
-	public static Queue<MySignal> enemySignal;
+class MyQueue<E> {
+	private E[] a;
+	private int l, r, arraySize = 10005;
 
-	public static void init() throws GameActionException {
-		// initializes channel queues
-		for(int channel = 33; --channel >= 0; ) {
-			channelQueue[channel] = new LinkedList<MySignal>();
-		}
-		enemySignal = new LinkedList<MySignal>();
+	public MyQueue() {
+		a = (E[]) (new Object[arraySize]);
+		l = r = 0;
 	}
 
+	public int size() {
+		return r-l;
+	}
+
+	public boolean isEmpty() {
+		return (r == l);
+	}
+
+	public void add(E m) {
+		a[r % arraySize] = m; r++;
+	}
+
+	public E remove() {
+		assert(l < r);
+		l++;
+		return (a[(l-1) % arraySize]);
+	}
+
+	public E get(int x) {
+		return a[(l+x) % arraySize];
+	}
+
+	public void clear() {
+		l = r = 0;
+	}
+	public E element() {
+		return get(0);
+	}
+}
+
+public class Radio extends Bot {
+	public static MyQueue<MySignal>[] channelQueue = new MyQueue[33];
+	public static MyQueue<MySignal> enemySignal;
+	public static boolean hasBeenInit = false;
+
+	public static void firstInit() throws GameActionException {
+		for (int channel = 33; --channel >= 0; )
+			channelQueue[channel] = new MyQueue<MySignal>();
+
+		enemySignal = new MyQueue<MySignal>();
+	}
+
+	public static void init() throws GameActionException {
+		//if the queues haven't been initialized, initialize them
+		if (!hasBeenInit)
+			firstInit();
+
+		//now they are initialized!
+		hasBeenInit = true;
+		//clears queues
+		for(int channel = 33; --channel >= 0; ) {
+			channelQueue[channel].clear();
+		}
+		enemySignal.clear();
+	}
+	
 	public static void broadcast(int channel, int message1, int message2, int radius) throws GameActionException {
 		// broadcasts message to a specified channel
 		// uses 5 bits for channel, 27 bits for message1, and 32 bits for message2
@@ -75,7 +127,8 @@ public class Radio extends Bot {
 		}
 		MySignal signal = channelQueue[channel].remove();
 		MapLocation location = new MapLocation(signal.message1 - 16000, signal.message2 - 16000);
-		return new IdAndMapLocation(signal.id, location);
+		return new IdAndMapLocation(signal.id,
+ location);
 	}
 
 	public static void process() throws GameActionException {
@@ -175,19 +228,11 @@ public class Radio extends Bot {
 		return getLocation(9);
 	}
 
-	public static void broadcastTurtleExpand(int newSize, int radius) throws GameActionException {
-		broadcast(10, newSize, 0, radius);
-	}
-
-	public static int getTurtleExpand() throws GameActionException {
-		if(channelQueue[10].isEmpty()) {
-			return -1;
-		}
-		MySignal signal = channelQueue[10].remove();
-		return signal.message1;
-	}
-
 	public static void broadcastInitialStrategyRequest(int radius) throws GameActionException {
+		rc.broadcastSignal(radius);
+	}
+
+	public static void broadcastReinforcementRequest(int radius) throws GameActionException {
 		rc.broadcastSignal(radius);
 	}
 
@@ -197,6 +242,15 @@ public class Radio extends Bot {
 		}
 		MySignal signal = channelQueue[32].remove();
 		return signal.id;
+
+	}
+
+	public static MapLocation getReinforcementRequest() throws GameActionException {
+		if(channelQueue[32].isEmpty()) {
+			return null;
+		}
+		MySignal signal = channelQueue[32].remove();
+		return signal.location;
 
 	}
 

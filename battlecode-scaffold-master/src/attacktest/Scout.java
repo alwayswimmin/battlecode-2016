@@ -139,6 +139,48 @@ public class Scout extends Bot {
 					}
 				}
 				break;
+			case 2:
+				// follow offensive turret
+				boolean shouldMoveAway = false;
+				for(int j = friendsWithinRange.length; --j >= 0; ) {
+					if(friendsWithinRange[j].type == RobotType.SCOUT) {
+						shouldMoveAway = true;
+					}
+				}
+				if(!shouldMoveAway) {
+					for(int j = friendsWithinRange.length; --j >= 0; ) {
+						if(friendsWithinRange[j].type == RobotType.TURRET || friendsWithinRange[j].type == RobotType.TTM) {
+							if(rc.isCoreReady()) {
+								Nav.goTo(friendsWithinRange[j].location);
+							}
+						}
+					}
+				}
+				
+				for(int i = 8; --i >= 0; ) {
+					if(rc.isCoreReady()) {
+						Nav.goTo(myLocation.add(dirToMove).add(dirToMove), new SPAll(rc.senseHostileRobots(myLocation, SIGHT_RANGE)));
+					}
+					if(rc.isCoreReady()) {
+						dirToMove = dirToMove.rotateLeft();
+					}
+				}
+				for(int i = 8; --i >= 0; ) {
+					if(rc.isCoreReady()) {
+						Nav.goTo(myLocation.add(dirToMove).add(dirToMove));
+					}
+					if(rc.isCoreReady()) {
+						dirToMove = dirToMove.rotateLeft();
+					}
+				}
+
+				locationsPastFewTurns.add(new MapLocation(myLocation.x, myLocation.y));
+				if(rc.getRoundNum() - myFirstTurn >= 20) {
+					MapLocation whereIWas = locationsPastFewTurns.remove();
+					if(whereIWas.distanceSquaredTo(myLocation) < 5) {
+						dirToMove = directions[rand.nextInt(1000) % 8];
+					}
+				}
 		}
 	}
 
@@ -150,7 +192,7 @@ public class Scout extends Bot {
 				if(friendsWithinRange[j].type == RobotType.TURRET || friendsWithinRange[j].type == RobotType.TTM) {
 					int dist = enemiesWithinRange[i].location.distanceSquaredTo(friendsWithinRange[j].location);
 					if(dist > friendsWithinRange[j].type.sensorRadiusSquared && dist <= friendsWithinRange[j].type.attackRadiusSquared) {
-						Radio.broadcastTurretAttack(enemiesWithinRange[i].location, friendsWithinRange[j].location.distanceSquaredTo(myLocation));
+						Radio.broadcastTurretAttack(enemiesWithinRange[i].location, 2 * friendsWithinRange[j].location.distanceSquaredTo(myLocation));
 						++instructionCount;
 						break;
 					}
@@ -165,7 +207,7 @@ public class Scout extends Bot {
 				if(friendsWithinRange[j].type == RobotType.TURRET || friendsWithinRange[j].type == RobotType.TTM) {
 					int dist = zombiesWithinRange[i].location.distanceSquaredTo(friendsWithinRange[j].location);
 					if(dist > friendsWithinRange[j].type.sensorRadiusSquared && dist <= friendsWithinRange[j].type.attackRadiusSquared) {
-						Radio.broadcastTurretAttack(zombiesWithinRange[i].location, friendsWithinRange[j].location.distanceSquaredTo(myLocation));
+						Radio.broadcastTurretAttack(zombiesWithinRange[i].location, 2 * friendsWithinRange[j].location.distanceSquaredTo(myLocation));
 						++instructionCount;
 						break;
 					}

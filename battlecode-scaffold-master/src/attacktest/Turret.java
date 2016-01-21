@@ -27,6 +27,7 @@ public class Turret extends Bot {
 		rnd = new Random(rc.getID());
 		Radio.broadcastInitialStrategyRequest(10);
 	}
+	private static int turnsSinceEnemySeen = 0;
 	private static void action() throws GameActionException {
 		processSignals();
 		switch(strategy) {                                                       
@@ -40,59 +41,72 @@ public class Turret extends Bot {
                                 break;
                 }
 		if(rc.getType() == RobotType.TURRET) {
-			RobotInfo[] visibleEnemyArray = rc.senseHostileRobots(rc.getLocation(), 1000000);
+			//RobotInfo[] visibleEnemyArray = rc.senseHostileRobots(rc.getLocation(), 1000000);
+			
+			RobotInfo[] enemiesWithinRange = rc.senseNearbyRobots(ATTACK_RANGE, enemyTeam);
+			RobotInfo[] zombiesWithinRange = rc.senseNearbyRobots(ATTACK_RANGE, Team.ZOMBIE);
 			ArrayList<MapLocation> enemyArrayList = new ArrayList<MapLocation>();
 			while(!Radio.enemySignal.isEmpty()) {
 				enemyArrayList.add(Radio.enemySignal.remove().location);
 			}
+			/*
 			for(RobotInfo enemyRI : visibleEnemyArray) {
 				enemyArrayList.add(enemyRI.location);
-			}
+			}*/
 
 			IdAndMapLocation scoutInstruction = Radio.getTurretAttack();
 			while(scoutInstruction != null) {
 				enemyArrayList.add(scoutInstruction.location);
 				scoutInstruction = Radio.getTurretAttack();
 			}
-
 			MapLocation[] enemyArray = new MapLocation[enemyArrayList.size()];
+
 
 			for(int i=0;i<enemyArrayList.size();i++){
 				enemyArray[i]=enemyArrayList.get(i);
 			}
 
-			if(enemyArray.length>0){
+			MapLocation toAttack = attackLocation(zombiesWithinRange, enemiesWithinRange, enemyArray);
+
+			if(toAttack != null) {
+			// if(enemyArray.length>0){
 				if(rc.isWeaponReady()){
 					//look for adjacent enemies to attack
-					for(MapLocation oneEnemy:enemyArray){
-						if(rc.canAttackLocation(oneEnemy)){
-							rc.setIndicatorString(0,"trying to attack");
-							rc.attackLocation(oneEnemy);
-							break;
-						}
-					}
+//					for(MapLocation oneEnemy:enemyArray){
+//						if(rc.canAttackLocation(oneEnemy)){
+//							rc.setIndicatorString(0,"trying to attack");
+//							rc.attackLocation(oneEnemy);
+//							break;
+//						}
+//					}
+					rc.attackLocation(toAttack);
+					turnsSinceEnemySeen = 0;
 				}
 				//could not find any enemies adjacent to attack
 				//try to move toward them
 				if(rc.isCoreReady()){
-					MapLocation goal = enemyArray[0];
-					Direction toEnemy = rc.getLocation().directionTo(goal);
-				if(strategy == 1) {
-					rc.pack();
-				}
-				}
-			} else {//there are no enemies nearby
-				//check to see if we are in the way of friends
-				//we are obstructing them
-				if(rc.isCoreReady()){
-					RobotInfo[] nearbyFriends = rc.senseNearbyRobots(2, rc.getTeam());
-					if(nearbyFriends.length>3){
-						Direction away = randomDirection();
+					// MapLocation goal = toAttack; // enemyArray[0];
+					// Direction toEnemy = rc.getLocation().directionTo(goal);
+					if(turnsSinceEnemySeen >= 10) {
 						if(strategy == 1) {
 							rc.pack();
 						}
 					}
 				}
+			} else {//there are no enemies nearby
+				//check to see if we are in the way of friends
+				//we are obstructing them
+//				if(rc.isCoreReady()){
+				if(turnsSinceEnemySeen >= 10) {
+//					RobotInfo[] nearbyFriends = rc.senseNearbyRobots(2, rc.getTeam());
+//					if(nearbyFriends.length>3){
+//						Direction away = randomDirection();
+						if(strategy == 1) {
+							rc.pack();
+						}
+//					}
+				}
+				turnsSinceEnemySeen++;
 			}
 		}
 		else {
@@ -112,16 +126,17 @@ public class Turret extends Bot {
 
 			if(enemyArray.length>0){
 				rc.unpack();
+				turnsSinceEnemySeen = 0;
 				//could not find any enemies adjacent to attack
 				//try to move toward them
-				if(rc.isCoreReady()){
-					MapLocation goal = enemyArray[0];
-					Nav.goTo(goal);
-				}
+				//if(rc.isCoreReady()){
+				//	MapLocation goal = enemyArray[0];
+				//	Nav.goTo(goal);
+				//}
 			}else{
-				if(strategy == 1) {
+//				if(strategy == 1) {
 					moveSomewhere();
-				}
+//				}
 			}
 
 		}
@@ -144,8 +159,8 @@ public class Turret extends Bot {
 		while(newDefend != null) {
 			if(teamMemberNeedsHelp[newDefend.id] == 0) {
 				defendQueue.add(newDefend.id);
-				teamMemberNeedsHelp[newDefend.id] = rc.getRoundNum();
 			}
+			teamMemberNeedsHelp[newDefend.id] = rc.getRoundNum();
 			teamLocations[newDefend.id] = newDefend.location;
 			newDefend = Radio.getDefendLocation();
 		}
@@ -162,7 +177,7 @@ public class Turret extends Bot {
 	private static void moveSomewhere() throws GameActionException {
 		while(!defendQueue.isEmpty()) {
 			int next = defendQueue.element();
-			if(teamMemberNeedsHelp[next] > 0 && rc.getRoundNum() - teamMemberNeedsHelp[next] < 200) {
+			if(teamMemberNeedsHelp[next] > 0/* && rc.getRoundNum() - teamMemberNeedsHelp[next] < 200*/) {
 				if(rc.isCoreReady()) {
 					Nav.goTo(teamLocations[next]);
 				}

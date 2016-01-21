@@ -3,7 +3,6 @@ package team074;
 import battlecode.common.*;
 
 import java.util.Random;
-import java.util.LinkedList;
 
 public class Scout extends Bot {
 	private static RobotType[] robotsEncountered = new RobotType[32001];
@@ -11,13 +10,14 @@ public class Scout extends Bot {
 	private static Direction[] directions = {Direction.NORTH, Direction.NORTH_EAST, Direction.EAST, Direction.SOUTH_EAST, Direction.SOUTH, Direction.SOUTH_WEST, Direction.WEST, Direction.NORTH_WEST};
 	private static Random rand;
 	private static Direction dirToMove;
-	private static LinkedList<MapLocation> locationsPastFewTurns;
+	private static MyQueue<MapLocation> locationsPastFewTurns;
 	private static int myFirstTurn = -1;
 
 	public static void run(RobotController _rc) throws GameActionException {
 		Bot.init(_rc);
 		init();
 		while(true) {
+			updateHealth();
 			Radio.process();
 			action();
 			Radio.clear();
@@ -27,12 +27,11 @@ public class Scout extends Bot {
 	private static void init() throws GameActionException {
 		// things that run for the first time
 		myFirstTurn = rc.getRoundNum();
-		personalHQ = rc.getInitialArchonLocations(myTeam)[0];
 		Radio.broadcastInitialStrategyRequest(10);
 		rand = new Random(rc.getID());
 		dirToMove = directions[rand.nextInt(1000) % 8];
-		// personalHQ = rc.getLocation();
-		locationsPastFewTurns = new LinkedList<MapLocation>();
+		personalHQ = rc.getLocation();
+		locationsPastFewTurns = new MyQueue<MapLocation>();
 	}
 
 	private static RobotInfo[]   friendsWithinRange;
@@ -46,10 +45,6 @@ public class Scout extends Bot {
 	private static void action() throws GameActionException {
 		// take my turn
 		myLocation = rc.getLocation();
-			int newRadius = Radio.getTurtleExpand();
-			if(newRadius != -1) {
-				radiusLimit = newRadius;
-			}
 
 		friendsWithinRange = rc.senseNearbyRobots(SIGHT_RANGE, myTeam);
 		enemiesWithinRange = rc.senseNearbyRobots(SIGHT_RANGE, enemyTeam);
@@ -59,6 +54,7 @@ public class Scout extends Bot {
 
 		int broadcastCount = 0;
 
+
 		for(int i = zombiesWithinRange.length; --i >= 0; ) {
 			if(broadcastCount < 20 && (robotsEncountered[zombiesWithinRange[i].ID] == null || rc.getRoundNum() - turnBroadcasted[zombiesWithinRange[i].ID] > 100) && zombiesWithinRange[i].type == RobotType.ZOMBIEDEN) {
 				robotsEncountered[zombiesWithinRange[i].ID] = zombiesWithinRange[i].type;
@@ -67,11 +63,13 @@ public class Scout extends Bot {
 				++broadcastCount;
 			}
 		}
+
 		/*
 		   if(!denFound && enemiesWithinRange.length != 0) {
 		   Radio.broadcastMoveLocation(enemiesWithinRange[0].location, 1000);
 		   }
-		   */
+		*/
+
 		for(int i = neutralsWithinRange.length; --i >= 0; ) {
 			if(broadcastCount < 20 && robotsEncountered[neutralsWithinRange[i].ID] == null) {
 				robotsEncountered[neutralsWithinRange[i].ID] = neutralsWithinRange[i].type;
@@ -104,20 +102,15 @@ public class Scout extends Bot {
 				break;
 			case 0:
 				// turret defense
-				expand(radiusLimit);
-				/*
 				for (int i = 0; i < 8; ++i) {
 					if (rc.isCoreReady() && rc.canMove(dirToMove) && myLocation.add(dirToMove).distanceSquaredTo(personalHQ) < radiusLimit) {
 						Nav.goTo(myLocation.add(dirToMove)); break;
 					}                                                                            
 					dirToMove = dirToMove.rotateLeft();
-				} 
-				*/
-			/*
+				}    
 				if(rc.getRoundNum() % 50 == 0) {                                                 
 					radiusLimit++;
 				} 
-			*/
 				break;
 			case 1:
 				// move randomly
@@ -146,6 +139,48 @@ public class Scout extends Bot {
 					}
 				}
 				break;
+			case 2:
+				// follow offensive turret
+				boolean shouldMoveAway = false;
+				for(int j = friendsWithinRange.length; --j >= 0; ) {
+					if(friendsWithinRange[j].type == RobotType.SCOUT) {
+						shouldMoveAway = true;
+					}
+				}
+				if(!shouldMoveAway) {
+					for(int j = friendsWithinRange.length; --j >= 0; ) {
+						if(friendsWithinRange[j].type == RobotType.TURRET || friendsWithinRange[j].type == RobotType.TTM) {
+							if(rc.isCoreReady()) {
+								Nav.goTo(friendsWithinRange[j].location);
+							}
+						}
+					}
+				}
+				
+				for(int i = 8; --i >= 0; ) {
+					if(rc.isCoreReady()) {
+						Nav.goTo(myLocation.add(dirToMove).add(dirToMove), new SPAll(rc.senseHostileRobots(myLocation, SIGHT_RANGE)));
+					}
+					if(rc.isCoreReady()) {
+						dirToMove = dirToMove.rotateLeft();
+					}
+				}
+				for(int i = 8; --i >= 0; ) {
+					if(rc.isCoreReady()) {
+						Nav.goTo(myLocation.add(dirToMove).add(dirToMove));
+					}
+					if(rc.isCoreReady()) {
+						dirToMove = dirToMove.rotateLeft();
+					}
+				}
+
+				locationsPastFewTurns.add(new MapLocation(myLocation.x, myLocation.y));
+				if(rc.getRoundNum() - myFirstTurn >= 20) {
+					MapLocation whereIWas = locationsPastFewTurns.remove();
+					if(whereIWas.distanceSquaredTo(myLocation) < 5) {
+						dirToMove = directions[rand.nextInt(1000) % 8];
+					}
+				}
 		}
 	}
 
@@ -157,7 +192,7 @@ public class Scout extends Bot {
 				if(friendsWithinRange[j].type == RobotType.TURRET || friendsWithinRange[j].type == RobotType.TTM) {
 					int dist = enemiesWithinRange[i].location.distanceSquaredTo(friendsWithinRange[j].location);
 					if(dist > friendsWithinRange[j].type.sensorRadiusSquared && dist <= friendsWithinRange[j].type.attackRadiusSquared) {
-						Radio.broadcastTurretAttack(enemiesWithinRange[i].location, radiusLimit * 2);
+						Radio.broadcastTurretAttack(enemiesWithinRange[i].location, 2 * friendsWithinRange[j].location.distanceSquaredTo(myLocation));
 						++instructionCount;
 						break;
 					}
@@ -172,7 +207,7 @@ public class Scout extends Bot {
 				if(friendsWithinRange[j].type == RobotType.TURRET || friendsWithinRange[j].type == RobotType.TTM) {
 					int dist = zombiesWithinRange[i].location.distanceSquaredTo(friendsWithinRange[j].location);
 					if(dist > friendsWithinRange[j].type.sensorRadiusSquared && dist <= friendsWithinRange[j].type.attackRadiusSquared) {
-						Radio.broadcastTurretAttack(zombiesWithinRange[i].location, radiusLimit * 2); 
+						Radio.broadcastTurretAttack(zombiesWithinRange[i].location, 2 * friendsWithinRange[j].location.distanceSquaredTo(myLocation));
 						++instructionCount;
 						break;
 					}
@@ -182,24 +217,5 @@ public class Scout extends Bot {
 				return;
 			}
 		}
-	}
-	private static void expand(int radius) throws GameActionException {
-				Direction dirToMove = Direction.EAST;
-					for (int i = 0; i < 8; ++i) {
-						MapLocation target = myLocation.add(dirToMove);
-						if (rc.onTheMap(target) && !rc.isLocationOccupied(target) && rc.senseRubble(target) < GameConstants.RUBBLE_OBSTRUCTION_THRESH && target.distanceSquaredTo(personalHQ) > myLocation.distanceSquaredTo(personalHQ) && target.distanceSquaredTo(personalHQ) <= radius) {
-								if(rc.isCoreReady()) {
-									Nav.goTo(target);
-							}
-							return;
-						}
-						dirToMove = dirToMove.rotateLeft();
-					}
-	}
-	private static void processSignals() throws GameActionException {
-        IdAndMapLocation newHQ = Radio.getMoveCampLocation();                            
-        if(newHQ != null) {
-            personalHQ = newHQ.location;
-        }           
 	}
 }

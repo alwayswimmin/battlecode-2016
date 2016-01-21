@@ -4,11 +4,11 @@ import battlecode.common.*;
 import java.util.*;
 
 public class Soldier extends Bot {
-	private static int radiusLimit = 4;
 	public static void run(RobotController _rc) throws GameActionException {
 		Bot.init(_rc);
 		init();
 		while(true) {
+			updateHealth();
 			Radio.process();
 			myLocation = rc.getLocation();
 			action();
@@ -16,22 +16,38 @@ public class Soldier extends Bot {
 			Clock.yield();
 		}
 	}
+
 	private static void init() throws GameActionException {
-		// things that run for the first time
+		// initializes soldier
 		personalHQ = rc.getLocation();
 		defendQueue = new LinkedList<Integer>();
 		moveQueue = new LinkedList<MapLocation>();
 		Radio.broadcastInitialStrategyRequest(10);
+/*		if(rc.getRoundNum() > 600) {
+			MapLocation[] initialEnemyArchonLocations = rc.getInitialArchonLocations(enemyTeam);
+			for(int i = 0; i < initialEnemyArchonLocations.length; ++i) {
+				 moveQueue.add(initialEnemyArchonLocations[i]);
+			}
+		}
+		*/
 	}
 
 	private static MapLocation defendLocation = null;
 	private static MapLocation attackLocation = null;
 	private static int turnsSinceLastAttack = 100;
 	private static void action() throws GameActionException {
-		// take my turn
+		// takes turn in following order:
+		//     processes signals
+		//     looks for enemies and zombies to attack
 		processSignals();
 		RobotInfo[] enemiesWithinRange = rc.senseNearbyRobots(ATTACK_RANGE, enemyTeam);
 		RobotInfo[] zombiesWithinRange = rc.senseNearbyRobots(ATTACK_RANGE, Team.ZOMBIE);
+		MapLocation toAttack = attackLocation(zombiesWithinRange, enemiesWithinRange, new MapLocation[0]);
+		if(toAttack != null && rc.isWeaponReady()) {
+			rc.attackLocation(toAttack);
+			turnsSinceLastAttack = 0;
+		}
+		/*
 		if (enemiesWithinRange.length > 0) {
 			// Check if weapon is ready
 			if (rc.isWeaponReady()) {
@@ -45,6 +61,10 @@ public class Soldier extends Bot {
 				turnsSinceLastAttack = 0;
 			}
 		}
+		*/
+
+		RobotInfo[] enemiesWithinSightRange = rc.senseNearbyRobots(SIGHT_RANGE, enemyTeam);
+		RobotInfo[] zombiesWithinSightRange = rc.senseNearbyRobots(SIGHT_RANGE, Team.ZOMBIE);
 		switch(strategy) {
 			case -1:
 				int channel = Radio.getTuneCommand();
@@ -55,7 +75,7 @@ public class Soldier extends Bot {
 			case 0:
 				break;
 			case 1:
-				if(turnsSinceLastAttack >= 2) {
+				if(turnsSinceLastAttack >= 4) {
 					moveSomewhere();
 				}
 				break;
@@ -76,25 +96,56 @@ public class Soldier extends Bot {
 			}
 		}
 
-				if(turnsSinceLastAttack >= 2) {
-		if (rc.isCoreReady()) {
-			int rot = (int)(Math.random() * 8);
-			Direction dirToMove = Direction.EAST;
-			for (int i = 0; i < rot; ++i)
-				dirToMove = dirToMove.rotateLeft();
-
-			for (int i = 0; i < 8; ++i) {
-				if(myLocation.add(dirToMove).distanceSquaredTo(personalHQ) <= radiusLimit) {
-				if (rc.canMove(dirToMove)) {
-					rc.move(dirToMove); break;
+		// kite
+		if(rc.isCoreReady()) {
+			RobotInfo[] immediateHostile = rc.senseHostileRobots(myLocation, SIGHT_RANGE);
+			for(int i = immediateHostile.length; --i >= 0; ) {
+				if(immediateHostile[i].type == RobotType.ARCHON || immediateHostile[i].type == RobotType.ZOMBIEDEN
+						|| immediateHostile[i].type == RobotType.TTM || immediateHostile[i].type == RobotType.TURRET || immediateHostile[i].type == RobotType.SCOUT) {
+					Nav.goTo(immediateHostile[i].location);
+					if(!rc.isCoreReady()) {
+						break;
+					}
 				}
-}
-				dirToMove = dirToMove.rotateLeft();
 			}
 		}
-		if(rc.isCoreReady()) {
-			Nav.goTo(personalHQ);
+
+		// move closer
+		/*
+		if (zombiesWithinSightRange.length > 0) {
+			if(rc.isCoreReady()) {
+				Nav.goTo(zombiesWithinSightRange[0].location);
+			}
+		} else if (enemiesWithinSightRange.length > 0) {
+			if(rc.isCoreReady()) {
+				Nav.goTo(enemiesWithinSightRange[0].location);
+			}
 		}
+		*/
+
+/*
+		if(rc.getRoundNum() == 600) {
+			MapLocation[] initialEnemyArchonLocations = rc.getInitialArchonLocations(enemyTeam);
+			for(int i = 0; i < initialEnemyArchonLocations.length; ++i) {
+				 moveQueue.add(initialEnemyArchonLocations[i]);
+			}
+		}
+*/
+		if(turnsSinceLastAttack >= 4) {
+			if (rc.isCoreReady()) {
+				int rot = (int)(Math.random() * 8);
+				Direction dirToMove = Direction.EAST;
+				for (int i = 0; i < rot; ++i)
+					dirToMove = dirToMove.rotateLeft();
+
+				for (int i = 0; i < 8; ++i) {
+					if (rc.canMove(dirToMove)) {
+						rc.move(dirToMove); break;
+					}
+
+					dirToMove = dirToMove.rotateLeft();
+				}
+			}
 		}
 		turnsSinceLastAttack++;
 	}
@@ -114,8 +165,8 @@ public class Soldier extends Bot {
 		while(newDefend != null) {
 			if(teamMemberNeedsHelp[newDefend.id] == 0) {
 				defendQueue.add(newDefend.id);
-				teamMemberNeedsHelp[newDefend.id] = rc.getRoundNum();
 			}
+			teamMemberNeedsHelp[newDefend.id] = rc.getRoundNum();
 			teamLocations[newDefend.id] = newDefend.location;
 			newDefend = Radio.getDefendLocation();
 		}
@@ -133,7 +184,7 @@ public class Soldier extends Bot {
 		if(strategy == 0) {
 			while(!defendQueue.isEmpty()) {
 				int next = defendQueue.element();
-				if(teamMemberNeedsHelp[next] > 0 && rc.getRoundNum() - teamMemberNeedsHelp[next] < 200) {
+				if(teamMemberNeedsHelp[next] > 0 /* && rc.getRoundNum() - teamMemberNeedsHelp[next] < 200 */ ) {
 					if(rc.isCoreReady()) {
 						Nav.goTo(teamLocations[next]);
 					}
@@ -152,9 +203,9 @@ public class Soldier extends Bot {
 			}
 			return;
 		}
-        if(rc.isCoreReady()) {
-            Nav.goTo(personalHQ);
-            return;
-        }
+		if(rc.isCoreReady()) {
+			Nav.goTo(personalHQ);
+			return;
+		}
 	}
 }

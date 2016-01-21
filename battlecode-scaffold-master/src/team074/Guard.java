@@ -1,14 +1,13 @@
 package team074;
 
 import battlecode.common.*;
-import java.util.LinkedList;
 
 public class Guard extends Bot {
-	private static int radiusLimit = 4;
 	public static void run(RobotController _rc) throws GameActionException {
 		Bot.init(_rc);
 		init();
 		while(true) {
+			updateHealth();
 			myLocation = rc.getLocation();
 			Radio.process();
 			action();
@@ -16,20 +15,21 @@ public class Guard extends Bot {
 			Clock.yield();
 		}
 	}
+
 	private static void init() throws GameActionException {
 		// things that run for the first time
 		personalHQ = rc.getLocation();
-		defendQueue = new LinkedList<Integer>();
-		moveQueue = new LinkedList<MapLocation>();
+		defendQueue = new MyQueue<Integer>();
+		moveQueue = new MyQueue<MapLocation>();
 		Radio.broadcastInitialStrategyRequest(10);
+		MapLocation[] initialEnemyArchonLocations = rc.getInitialArchonLocations(enemyTeam);
+		for(int i = 0; i < initialEnemyArchonLocations.length; ++i) {
+			// moveQueue.add(initialEnemyArchonLocations[i]);
+		}
 	}
 	private static void action() throws GameActionException {
 		// take my turn
 		processSignals();
-			int newRadius = Radio.getTurtleExpand();
-			if(newRadius != -1) {
-				radiusLimit = newRadius;
-			}
 		RobotInfo[] enemiesWithinRange = rc.senseNearbyRobots(ATTACK_RANGE, enemyTeam);
 		RobotInfo[] zombiesWithinRange = rc.senseNearbyRobots(ATTACK_RANGE, Team.ZOMBIE);
 		if (zombiesWithinRange.length > 0) {
@@ -43,11 +43,11 @@ public class Guard extends Bot {
 		}
 		RobotInfo[] enemiesWithinSightRange = rc.senseNearbyRobots(SIGHT_RANGE, enemyTeam);
 		RobotInfo[] zombiesWithinSightRange = rc.senseNearbyRobots(SIGHT_RANGE, Team.ZOMBIE);
-		if (zombiesWithinRange.length > 0) {
+		if (zombiesWithinSightRange.length > 0) {
 			if(rc.isCoreReady()) {
 				Nav.goTo(zombiesWithinSightRange[0].location);
 			}
-		} else if (enemiesWithinRange.length > 0) {
+		} else if (enemiesWithinSightRange.length > 0) {
 			if(rc.isCoreReady()) {
 				Nav.goTo(enemiesWithinSightRange[0].location);
 			}
@@ -76,21 +76,17 @@ public class Guard extends Bot {
 				dirToMove = dirToMove.rotateLeft();
 
 			for (int i = 0; i < 8; ++i) {
-				if(myLocation.add(dirToMove).distanceSquaredTo(personalHQ) <= radiusLimit) {
 				if (rc.canMove(dirToMove)) {
 					rc.move(dirToMove); break;
 				}
-}
+
 				dirToMove = dirToMove.rotateLeft();
 			}
 		}
-		if(rc.isCoreReady()) {
-			Nav.goTo(personalHQ);
-		}
 	}
 
-	private static LinkedList<Integer> defendQueue;
-	private static LinkedList<MapLocation> moveQueue;
+	private static MyQueue<Integer> defendQueue;
+	private static MyQueue<MapLocation> moveQueue;
 	private static MapLocation[] teamLocations = new MapLocation[32001];
 	private static int[] teamMemberNeedsHelp = new int[32001]; // store what turn request was made
 
@@ -146,3 +142,4 @@ public class Guard extends Bot {
         }
 	}
 }
+

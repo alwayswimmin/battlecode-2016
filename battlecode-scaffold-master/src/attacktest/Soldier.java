@@ -165,8 +165,8 @@ public class Soldier extends Bot {
 		while(newDefend != null) {
 			if(teamMemberNeedsHelp[newDefend.id] == 0) {
 				defendQueue.add(newDefend.id);
-				teamMemberNeedsHelp[newDefend.id] = rc.getRoundNum();
 			}
+			teamMemberNeedsHelp[newDefend.id] = rc.getRoundNum();
 			teamLocations[newDefend.id] = newDefend.location;
 			newDefend = Radio.getDefendLocation();
 		}
@@ -184,7 +184,7 @@ public class Soldier extends Bot {
 		if(strategy == 0) {
 			while(!defendQueue.isEmpty()) {
 				int next = defendQueue.element();
-				if(teamMemberNeedsHelp[next] > 0 && rc.getRoundNum() - teamMemberNeedsHelp[next] < 200) {
+				if(teamMemberNeedsHelp[next] > 0 /* && rc.getRoundNum() - teamMemberNeedsHelp[next] < 200 */ ) {
 					if(rc.isCoreReady()) {
 						Nav.goTo(teamLocations[next]);
 					}

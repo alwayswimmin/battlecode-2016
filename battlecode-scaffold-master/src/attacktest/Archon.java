@@ -83,6 +83,12 @@ public class Archon extends Bot {
 		if(rc.getRoundNum() == 600) {
 			personalHQ = myLocation;
 		}
+//		if(rc.getRoundNum() == 1000) {
+//			MapLocation[] initialEnemyArchonLocations = rc.getInitialArchonLocations(enemyTeam);
+//			for(int i = 0; i < initialEnemyArchonLocations.length; ++i) {
+//				moveQueue.add(initialEnemyArchonLocations[i]);
+//			}
+//		}
 		// make forced moves if forced move counter is non-zero
 		if(forcedMoveCounter > 0 && rc.isCoreReady()) {
 			forcedMoveCounter--;
@@ -292,9 +298,9 @@ public class Archon extends Bot {
 				if((rc.getRoundNum() > 200 || rc.getZombieSpawnSchedule().getRounds()[0] != 0) && (unitsOfTypeBuilt[2] < 1 || Math.random() > 0.95)) {
 					typeToBuild = 2;
 				} else if(Math.random() > 0.80) {
-					typeToBuild = 5;
-					// typeToBuild = 3; // actually don't build vipers for now
-				} else if(Math.random() > 0.85) {
+					// typeToBuild = 5;
+					typeToBuild = 3; // actually don't build vipers for now
+				} else if(rc.getRoundNum() > 300 && Math.random() > 0.70) {
 					// typeToBuild = 1;
 					typeToBuild = 3; // actually don't build guards for now
 				} else {
@@ -507,12 +513,13 @@ public class Archon extends Bot {
 			case 0:
 			case 1:
 				return 1;
-				// return 2 - (unitsOfTypeBuilt[robotType] % 3) % 2; // 0 defend, 1 attack
+				// return 1 - (unitsOfTypeBuilt[robotType] % 3) % 2; // 0 defend, 1 attack
 			case 2:
-				return strategy; // 0 turret defense, 1 roam
+				// return strategy; // 0 turret defense, 1 roam
+				return rc.getRoundNum() >= 300 ? Math.random() > 0.6 ? 1 : 2 : 1;
 			case 3:
-				return 1;
-				// return 2 - (unitsOfTypeBuilt[robotType] % 3) % 2; // 0 defend, 1 attack
+				// return 1;
+				return 1 - (unitsOfTypeBuilt[robotType] % 3) % 2; // 0 defend, 1 attack
 			case 4:
 				return strategy; // 0 turret defense, 1 roam
 			case 5:

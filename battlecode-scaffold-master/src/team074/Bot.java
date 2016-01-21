@@ -17,15 +17,20 @@ public class Bot {
 	public static int ID;
 	public static int SIGHT_RANGE;
 	public static int ATTACK_RANGE;
+	public static double MAX_HEALTH;
+
 	public static Direction[] directions = new Direction[8];
+	public static double previousHealth = -1, currentHealth = -1;
 
 	protected static MapLocation myLocation; // bot classes are responsible for keeping this up to date
 
 	public static double distanceBetween(MapLocation a, MapLocation b) {
-		return (a.x-b.x)*(a.x-b.x)+(a.y-b.y)*(a.y-b.y);
+		// returns distance between two map locations
+		return (a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y);
 	}
 
 	public static int distToWall(MapLocation a, Direction dir) throws GameActionException {
+		// returns distance to wall in a given direction
 		MapLocation b = a;
 		for (int i = 0; i < 4; ++i) {
 			b = b.add(dir);
@@ -33,7 +38,7 @@ public class Bot {
 				return i+1;
 		}
 
-		return 1000; //represents "very fat", out of SIGHT_RANGE
+		return 1000; //represents "very far", out of SIGHT_RANGE
 	}
 
 	public static int rotationsTo(Direction a, Direction b) throws GameActionException {
@@ -46,6 +51,396 @@ public class Bot {
 		}
 
 		return 0;
+	}
+
+	//did Bot take damage last turn?
+
+	public static boolean tookDamage() throws GameActionException {
+		return ((previousHealth == -1) ? false : (previousHealth > rc.getHealth()));
+	}
+
+	//update health counters after the turn
+	public static void updateHealth() throws GameActionException {
+		previousHealth = currentHealth;
+		currentHealth = rc.getHealth();
+	}
+
+	public static MapLocation attackLocation(RobotInfo[] ZombieInfo, RobotInfo[] EnemyInfo, MapLocation[] ScoutInfo) {
+		if(rc.getType() == RobotType.TURRET) {
+
+		MapLocation attackLocation = null;
+		MapLocation myLocation2 = rc.getLocation();
+		double distanceTo = 1000000000, x;
+
+		for (int i = 0; i < EnemyInfo.length; ++i) {
+			x = distanceBetween(myLocation2, EnemyInfo[i].location);
+
+			if (EnemyInfo[i].type == RobotType.ARCHON && (ATTACK_RANGE >= x && GameConstants.TURRET_MINIMUM_RANGE <= x)) {
+				if (x < distanceTo) {
+					distanceTo = x;
+					attackLocation = EnemyInfo[i].location;
+				}
+			}
+		}
+
+		if (attackLocation != null)
+			return attackLocation;
+
+		for (int i = 0; i < EnemyInfo.length; ++i) {
+			x = distanceBetween(myLocation2, EnemyInfo[i].location);
+
+			if (EnemyInfo[i].type == RobotType.TURRET && (ATTACK_RANGE >= x && GameConstants.TURRET_MINIMUM_RANGE <= x)) {
+				if (x < distanceTo) {
+					distanceTo = x;
+					attackLocation = EnemyInfo[i].location;
+				}
+			}
+		}
+
+		if (attackLocation != null)
+			return attackLocation;
+
+		for (int i = 0; i < EnemyInfo.length; ++i) {
+			x = distanceBetween(myLocation2, EnemyInfo[i].location);
+
+			if (EnemyInfo[i].type == RobotType.VIPER && (ATTACK_RANGE >= x && GameConstants.TURRET_MINIMUM_RANGE <= x)) {
+				if (x < distanceTo) {
+					distanceTo = x;
+					attackLocation = EnemyInfo[i].location;
+				}
+			}
+		}
+
+		if (attackLocation != null)
+			return attackLocation;
+
+		for (int i = 0; i < EnemyInfo.length; ++i) {
+			x = distanceBetween(myLocation2, EnemyInfo[i].location);
+
+			if (EnemyInfo[i].type == RobotType.SOLDIER && (ATTACK_RANGE >= x && GameConstants.TURRET_MINIMUM_RANGE <= x)) {
+				if (x < distanceTo) {
+					distanceTo = x;
+					attackLocation = EnemyInfo[i].location;
+				}
+			}
+		}
+
+		if (attackLocation != null)
+			return attackLocation;
+
+		for (int i = 0; i < EnemyInfo.length; ++i) {
+			x = distanceBetween(myLocation2, EnemyInfo[i].location);
+
+			if (EnemyInfo[i].type == RobotType.GUARD && (ATTACK_RANGE >= x && GameConstants.TURRET_MINIMUM_RANGE <= x)) {
+				if (x < distanceTo) {
+					distanceTo = x;
+					attackLocation = EnemyInfo[i].location;
+				}
+			}
+		}
+
+		if (attackLocation != null)
+			return attackLocation;
+
+		for (int i = 0; i < EnemyInfo.length; ++i) {
+			x = distanceBetween(myLocation2, EnemyInfo[i].location);
+
+			if (ATTACK_RANGE >= x && GameConstants.TURRET_MINIMUM_RANGE <= x) {
+				if (x < distanceTo) {
+					distanceTo = x;
+					attackLocation = EnemyInfo[i].location;
+				}
+			}
+		}
+
+		if (attackLocation != null)
+			return attackLocation;
+
+
+		for (int i = 0; i < ZombieInfo.length; ++i) {
+			x = distanceBetween(myLocation2, ZombieInfo[i].location);
+
+			if (ZombieInfo[i].type == RobotType.RANGEDZOMBIE && (ATTACK_RANGE >= x && GameConstants.TURRET_MINIMUM_RANGE <= x)) {
+				if (x < distanceTo) {
+					distanceTo = x;
+					attackLocation = ZombieInfo[i].location;
+				}
+			}
+		}
+
+		if (attackLocation != null)
+			return attackLocation;
+
+		for (int i = 0; i < ZombieInfo.length; ++i) {
+			x = distanceBetween(myLocation2, ZombieInfo[i].location);
+
+			if (ZombieInfo[i].type == RobotType.FASTZOMBIE && (ATTACK_RANGE >= x && GameConstants.TURRET_MINIMUM_RANGE <= x)) {
+				if (x < distanceTo) {
+					distanceTo = x;
+					attackLocation = ZombieInfo[i].location;
+				}
+			}
+		}
+
+		if (attackLocation != null)
+			return attackLocation;
+
+		for (int i = 0; i < ZombieInfo.length; ++i) {
+			x = distanceBetween(myLocation2, ZombieInfo[i].location);
+
+			if (ZombieInfo[i].type == RobotType.BIGZOMBIE && (ATTACK_RANGE >= x && GameConstants.TURRET_MINIMUM_RANGE <= x)) {
+				if (x < distanceTo) {
+					distanceTo = x;
+					attackLocation = ZombieInfo[i].location;
+				}
+			}
+		}
+
+		if (attackLocation != null)
+			return attackLocation;
+
+		for (int i = 0; i < ZombieInfo.length; ++i) {
+			x = distanceBetween(myLocation2, ZombieInfo[i].location);
+
+			if (ZombieInfo[i].type == RobotType.STANDARDZOMBIE && (ATTACK_RANGE >= x && GameConstants.TURRET_MINIMUM_RANGE <= x)) {
+				if (x < distanceTo) {
+					distanceTo = x;
+					attackLocation = ZombieInfo[i].location;
+				}
+			}
+		}
+
+		if (attackLocation != null)
+			return attackLocation;
+
+		for (int i = 0; i < ZombieInfo.length; ++i) {
+			x = distanceBetween(myLocation2, ZombieInfo[i].location);
+
+			if (ZombieInfo[i].type == RobotType.ZOMBIEDEN && (ATTACK_RANGE >= x && GameConstants.TURRET_MINIMUM_RANGE <= x)) {
+				if (x < distanceTo) {
+					distanceTo = x;
+					attackLocation = ZombieInfo[i].location;
+				}
+			}
+		}
+
+		if (attackLocation != null)
+			return attackLocation;
+
+		for (int i = 0; i < ZombieInfo.length; ++i) {
+			x = distanceBetween(myLocation2, ZombieInfo[i].location);
+
+			if (ATTACK_RANGE >= x && GameConstants.TURRET_MINIMUM_RANGE <= x) {
+				if (x < distanceTo) {
+					distanceTo = x;
+					attackLocation = ZombieInfo[i].location;
+				}
+			}
+		}
+
+		if (attackLocation != null)
+			return attackLocation;
+
+		for (int i = 0; i < ScoutInfo.length; ++i) {
+			x = distanceBetween(myLocation2, ScoutInfo[i]);
+
+			if (ATTACK_RANGE >= x && GameConstants.TURRET_MINIMUM_RANGE <= x) {
+				if (x < distanceTo) {
+					distanceTo = x;
+					attackLocation = ScoutInfo[i];
+				}
+			}
+		}
+
+		return attackLocation;
+			
+		} else {
+		MapLocation attackLocation = null;
+		MapLocation myLocation2 = rc.getLocation();
+		double distanceTo = 1000000000, x;
+
+		for (int i = 0; i < EnemyInfo.length; ++i) {
+			x = distanceBetween(myLocation2, EnemyInfo[i].location);
+
+			if (EnemyInfo[i].type == RobotType.ARCHON && (ATTACK_RANGE >= x)) {
+				if (x < distanceTo) {
+					distanceTo = x;
+					attackLocation = EnemyInfo[i].location;
+				}
+			}
+		}
+
+		if (attackLocation != null)
+			return attackLocation;
+
+		for (int i = 0; i < EnemyInfo.length; ++i) {
+			x = distanceBetween(myLocation2, EnemyInfo[i].location);
+
+			if (EnemyInfo[i].type == RobotType.TURRET && (ATTACK_RANGE >= x)) {
+				if (x < distanceTo) {
+					distanceTo = x;
+					attackLocation = EnemyInfo[i].location;
+				}
+			}
+		}
+
+		if (attackLocation != null)
+			return attackLocation;
+
+		for (int i = 0; i < EnemyInfo.length; ++i) {
+			x = distanceBetween(myLocation2, EnemyInfo[i].location);
+
+			if (EnemyInfo[i].type == RobotType.VIPER && (ATTACK_RANGE >= x)) {
+				if (x < distanceTo) {
+					distanceTo = x;
+					attackLocation = EnemyInfo[i].location;
+				}
+			}
+		}
+
+		if (attackLocation != null)
+			return attackLocation;
+
+		for (int i = 0; i < EnemyInfo.length; ++i) {
+			x = distanceBetween(myLocation2, EnemyInfo[i].location);
+
+			if (EnemyInfo[i].type == RobotType.SOLDIER && (ATTACK_RANGE >= x)) {
+				if (x < distanceTo) {
+					distanceTo = x;
+					attackLocation = EnemyInfo[i].location;
+				}
+			}
+		}
+
+		if (attackLocation != null)
+			return attackLocation;
+
+		for (int i = 0; i < EnemyInfo.length; ++i) {
+			x = distanceBetween(myLocation2, EnemyInfo[i].location);
+
+			if (EnemyInfo[i].type == RobotType.GUARD && (ATTACK_RANGE >= x)) {
+				if (x < distanceTo) {
+					distanceTo = x;
+					attackLocation = EnemyInfo[i].location;
+				}
+			}
+		}
+
+		if (attackLocation != null)
+			return attackLocation;
+
+		for (int i = 0; i < EnemyInfo.length; ++i) {
+			x = distanceBetween(myLocation2, EnemyInfo[i].location);
+
+			if (ATTACK_RANGE >= x) {
+				if (x < distanceTo) {
+					distanceTo = x;
+					attackLocation = EnemyInfo[i].location;
+				}
+			}
+		}
+
+		if (attackLocation != null)
+			return attackLocation;
+
+
+		for (int i = 0; i < ZombieInfo.length; ++i) {
+			x = distanceBetween(myLocation2, ZombieInfo[i].location);
+
+			if (ZombieInfo[i].type == RobotType.RANGEDZOMBIE && (ATTACK_RANGE >= x)) {
+				if (x < distanceTo) {
+					distanceTo = x;
+					attackLocation = ZombieInfo[i].location;
+				}
+			}
+		}
+
+		if (attackLocation != null)
+			return attackLocation;
+
+		for (int i = 0; i < ZombieInfo.length; ++i) {
+			x = distanceBetween(myLocation2, ZombieInfo[i].location);
+
+			if (ZombieInfo[i].type == RobotType.FASTZOMBIE && (ATTACK_RANGE >= x)) {
+				if (x < distanceTo) {
+					distanceTo = x;
+					attackLocation = ZombieInfo[i].location;
+				}
+			}
+		}
+
+		if (attackLocation != null)
+			return attackLocation;
+
+		for (int i = 0; i < ZombieInfo.length; ++i) {
+			x = distanceBetween(myLocation2, ZombieInfo[i].location);
+
+			if (ZombieInfo[i].type == RobotType.BIGZOMBIE && (ATTACK_RANGE >= x)) {
+				if (x < distanceTo) {
+					distanceTo = x;
+					attackLocation = ZombieInfo[i].location;
+				}
+			}
+		}
+
+		if (attackLocation != null)
+			return attackLocation;
+
+		for (int i = 0; i < ZombieInfo.length; ++i) {
+			x = distanceBetween(myLocation2, ZombieInfo[i].location);
+
+			if (ZombieInfo[i].type == RobotType.STANDARDZOMBIE && (ATTACK_RANGE >= x)) {
+				if (x < distanceTo) {
+					distanceTo = x;
+					attackLocation = ZombieInfo[i].location;
+				}
+			}
+		}
+
+		if (attackLocation != null)
+			return attackLocation;
+
+		for (int i = 0; i < ZombieInfo.length; ++i) {
+			x = distanceBetween(myLocation2, ZombieInfo[i].location);
+
+			if (ZombieInfo[i].type == RobotType.ZOMBIEDEN && (ATTACK_RANGE >= x)) {
+				if (x < distanceTo) {
+					distanceTo = x;
+					attackLocation = ZombieInfo[i].location;
+				}
+			}
+		}
+
+		if (attackLocation != null)
+			return attackLocation;
+
+		for (int i = 0; i < ZombieInfo.length; ++i) {
+			x = distanceBetween(myLocation2, ZombieInfo[i].location);
+
+			if (ATTACK_RANGE >= x) {
+				if (x < distanceTo) {
+					distanceTo = x;
+					attackLocation = ZombieInfo[i].location;
+				}
+			}
+		}
+
+		if (attackLocation != null)
+			return attackLocation;
+
+		for (int i = 0; i < ScoutInfo.length; ++i) {
+			x = distanceBetween(myLocation2, ScoutInfo[i]);
+
+			if (ATTACK_RANGE >= x) {
+				if (x < distanceTo) {
+					distanceTo = x;
+					attackLocation = ScoutInfo[i];
+				}
+			}
+		}
+
+		return attackLocation;
+		}
 	}
 
 	protected static void init(RobotController _rc) throws GameActionException {
@@ -64,6 +459,7 @@ public class Bot {
 		ID = rc.getID();
 		SIGHT_RANGE = TYPE.sensorRadiusSquared;
 		ATTACK_RANGE = TYPE.attackRadiusSquared;
+		MAX_HEALTH = TYPE.maxHealth;
 
 		directions[0] = Direction.EAST;
 		for (int i = 1; i < 8; ++i) {
@@ -71,4 +467,3 @@ public class Bot {
 		}
 	}
 }
-

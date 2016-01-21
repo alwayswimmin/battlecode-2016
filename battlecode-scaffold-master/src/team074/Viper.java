@@ -8,6 +8,7 @@ public class Viper extends Bot {
 		Bot.init(_rc);
 		init();
 		while(true) {
+			updateHealth();
 			Radio.process();
 			myLocation = rc.getLocation();
 			action();
@@ -18,9 +19,16 @@ public class Viper extends Bot {
 	private static void init() throws GameActionException {
 		// things that run for the first time
 		personalHQ = rc.getLocation();
-		defendQueue = new LinkedList<Integer>();
-		moveQueue = new LinkedList<MapLocation>();
+		defendQueue = new MyQueue<Integer>();
+		moveQueue = new MyQueue<MapLocation>();
 		Radio.broadcastInitialStrategyRequest(10);
+		// MapLocation[] initialEnemyArchonLocations = rc.getInitialArchonLocations(enemyTeam);
+		if(rc.getRoundNum() > 600) {
+			MapLocation[] initialEnemyArchonLocations = rc.getInitialArchonLocations(enemyTeam);
+			for(int i = 0; i < initialEnemyArchonLocations.length; ++i) {
+//				 moveQueue.add(initialEnemyArchonLocations[i]);
+			}
+		}
 	}
 
 	private static MapLocation defendLocation = null;
@@ -42,18 +50,23 @@ public class Viper extends Bot {
 				}
 			}
 			if (rc.isWeaponReady()) {
-				rc.attackLocation(enemiesWithinRange[0].location);
+				rc.attackLocation(enemiesWithinRange[enemiesWithinRange.length - 1].location);
+				turnsSinceLastAttack = 0;
+			}
+		} else if (enemiesWithinRange.length == 1 && enemiesWithinRange[0].type == RobotType.ARCHON) {
+			if (rc.isWeaponReady()) {
+				rc.attackLocation(enemiesWithinRange[enemiesWithinRange.length - 1].location);
 				turnsSinceLastAttack = 0;
 			}
 		} else if (zombiesWithinRange.length > 0) {
 			// Check if weapon is ready
 			for(int i = zombiesWithinRange.length; --i >= 0; ) {
-				if(zombiesWithinRange[i].viperInfectedTurns < 5) {
+				// if(zombiesWithinRange[i].viperInfectedTurns < 5) {
 					if (rc.isWeaponReady()) {
 						rc.attackLocation(zombiesWithinRange[i].location);
 						turnsSinceLastAttack = 0;
 					}
-				}
+				// }
 			}
 			if (rc.isWeaponReady()) {
 				rc.attackLocation(zombiesWithinRange[0].location);
@@ -91,6 +104,25 @@ public class Viper extends Bot {
 			}
 		}
 
+		RobotInfo[] enemiesWithinSightRange = rc.senseNearbyRobots(SIGHT_RANGE, enemyTeam);
+		RobotInfo[] zombiesWithinSightRange = rc.senseNearbyRobots(SIGHT_RANGE, Team.ZOMBIE);
+		// move closer
+		if (zombiesWithinSightRange.length > 0) {
+			if(rc.isCoreReady()) {
+				Nav.goTo(zombiesWithinSightRange[0].location);
+			}
+		} else if (enemiesWithinSightRange.length > 0) {
+			if(rc.isCoreReady()) {
+				Nav.goTo(enemiesWithinSightRange[0].location);
+			}
+		}
+
+		if(rc.getRoundNum() == 600) {
+			MapLocation[] initialEnemyArchonLocations = rc.getInitialArchonLocations(enemyTeam);
+			for(int i = 0; i < initialEnemyArchonLocations.length; ++i) {
+				 moveQueue.add(initialEnemyArchonLocations[i]);
+			}
+		}
 				if(turnsSinceLastAttack >= 2) {
 		if (rc.isCoreReady()) {
 			int rot = (int)(Math.random() * 8);
@@ -110,8 +142,8 @@ public class Viper extends Bot {
 		turnsSinceLastAttack++;
 	}
 
-	private static LinkedList<Integer> defendQueue;
-	private static LinkedList<MapLocation> moveQueue;
+	private static MyQueue<Integer> defendQueue;
+	private static MyQueue<MapLocation> moveQueue;
 	private static MapLocation[] teamLocations = new MapLocation[32001];
 	private static int[] teamMemberNeedsHelp = new int[32001]; // store what turn request was made
 
