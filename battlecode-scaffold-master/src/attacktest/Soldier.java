@@ -83,6 +83,7 @@ public class Soldier extends Bot {
 				break;
 		}
 
+		// kite
 		if(rc.isCoreReady()) {
 			RobotInfo[] immediateHostile = rc.senseHostileRobots(myLocation, 4);
 			for(int i = immediateHostile.length; --i >= 0; ) {
@@ -96,12 +97,13 @@ public class Soldier extends Bot {
 			}
 		}
 
-		// kite
+		// move closer
 		if(rc.isCoreReady()) {
 			RobotInfo[] immediateHostile = rc.senseHostileRobots(myLocation, SIGHT_RANGE);
 			for(int i = immediateHostile.length; --i >= 0; ) {
 				if(immediateHostile[i].type == RobotType.ARCHON || immediateHostile[i].type == RobotType.ZOMBIEDEN
-						|| immediateHostile[i].type == RobotType.TTM || immediateHostile[i].type == RobotType.TURRET || immediateHostile[i].type == RobotType.SCOUT) {
+						|| immediateHostile[i].type == RobotType.TTM || immediateHostile[i].type == RobotType.TURRET || immediateHostile[i].type == RobotType.SCOUT
+						|| immediateHostile[i].type == RobotType.RANGEDZOMBIE || immediateHostile[i].type == RobotType.SOLDIER || immediateHostile[i].type == RobotType.VIPER) {
 					Nav.goTo(immediateHostile[i].location);
 					if(!rc.isCoreReady()) {
 						break;
@@ -112,13 +114,13 @@ public class Soldier extends Bot {
 
 		// move closer
 		/*
-		if (zombiesWithinSightRange.length > 0) {
-			if(rc.isCoreReady()) {
-				Nav.goTo(zombiesWithinSightRange[0].location);
-			}
-		} else if (enemiesWithinSightRange.length > 0) {
+		if (enemiesWithinSightRange.length > 0) {
 			if(rc.isCoreReady()) {
 				Nav.goTo(enemiesWithinSightRange[0].location);
+			}
+		} else if (zombiesWithinSightRange.length > 0) {
+			if(rc.isCoreReady()) {
+				Nav.goTo(zombiesWithinSightRange[0].location);
 			}
 		}
 		*/
