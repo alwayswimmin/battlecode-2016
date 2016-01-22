@@ -32,6 +32,7 @@ public class Soldier extends Bot {
 		*/
 	}
 
+	private static SafetyPolicy policy;
 	private static MapLocation defendLocation = null;
 	private static MapLocation attackLocation = null;
 	private static int turnsSinceLastAttack = 100;
@@ -39,6 +40,7 @@ public class Soldier extends Bot {
 		// takes turn in following order:
 		//     processes signals
 		//     looks for enemies and zombies to attack
+		policy = new SPShort(rc.senseHostileRobots(myLocation, 100000));
 		processSignals();
 		RobotInfo[] enemiesWithinRange = rc.senseNearbyRobots(ATTACK_RANGE, enemyTeam);
 		RobotInfo[] zombiesWithinRange = rc.senseNearbyRobots(ATTACK_RANGE, Team.ZOMBIE);
@@ -83,12 +85,24 @@ public class Soldier extends Bot {
 				break;
 		}
 
+		double maxHealth = RobotType.SOLDIER.maxHealth;
+		if(rc.isCoreReady() && rc.getInfectedTurns() != 0 && rc.getHealth() < 0.5 * maxHealth) {
+			RobotInfo[] surroundingHostile = rc.senseNearbyRobots(SIGHT_RANGE, enemyTeam);
+			if(surroundingHostile.length != 0) {
+				Nav.goTo(surroundingHostile[0].location);
+			} else {
+				Nav.goTo(rc.getInitialArchonLocations(enemyTeam)[0]);
+			}
+		}
+
+
+		// kite
 		if(rc.isCoreReady()) {
 			RobotInfo[] immediateHostile = rc.senseHostileRobots(myLocation, 4);
 			for(int i = immediateHostile.length; --i >= 0; ) {
 				if(immediateHostile[i].type == RobotType.STANDARDZOMBIE || immediateHostile[i].type == RobotType.BIGZOMBIE
 						|| immediateHostile[i].type == RobotType.FASTZOMBIE || immediateHostile[i].type == RobotType.GUARD) {
-					Nav.goTo(myLocation.add(immediateHostile[i].location.directionTo(myLocation)));
+					Nav.goTo(myLocation.add(immediateHostile[i].location.directionTo(myLocation)), policy);
 					if(!rc.isCoreReady()) {
 						break;
 					}
@@ -96,13 +110,14 @@ public class Soldier extends Bot {
 			}
 		}
 
-		// kite
+		// move closer
 		if(rc.isCoreReady()) {
 			RobotInfo[] immediateHostile = rc.senseHostileRobots(myLocation, SIGHT_RANGE);
 			for(int i = immediateHostile.length; --i >= 0; ) {
 				if(immediateHostile[i].type == RobotType.ARCHON || immediateHostile[i].type == RobotType.ZOMBIEDEN
-						|| immediateHostile[i].type == RobotType.TTM || immediateHostile[i].type == RobotType.TURRET || immediateHostile[i].type == RobotType.SCOUT) {
-					Nav.goTo(immediateHostile[i].location);
+						|| immediateHostile[i].type == RobotType.TTM || immediateHostile[i].type == RobotType.TURRET || immediateHostile[i].type == RobotType.SCOUT
+						|| immediateHostile[i].type == RobotType.RANGEDZOMBIE || immediateHostile[i].type == RobotType.SOLDIER || immediateHostile[i].type == RobotType.VIPER) {
+					Nav.goTo(immediateHostile[i].location, policy);
 					if(!rc.isCoreReady()) {
 						break;
 					}
@@ -112,13 +127,13 @@ public class Soldier extends Bot {
 
 		// move closer
 		/*
-		if (zombiesWithinSightRange.length > 0) {
-			if(rc.isCoreReady()) {
-				Nav.goTo(zombiesWithinSightRange[0].location);
-			}
-		} else if (enemiesWithinSightRange.length > 0) {
+		if (enemiesWithinSightRange.length > 0) {
 			if(rc.isCoreReady()) {
 				Nav.goTo(enemiesWithinSightRange[0].location);
+			}
+		} else if (zombiesWithinSightRange.length > 0) {
+			if(rc.isCoreReady()) {
+				Nav.goTo(zombiesWithinSightRange[0].location);
 			}
 		}
 		*/
@@ -132,18 +147,33 @@ public class Soldier extends Bot {
 		}
 */
 		if(turnsSinceLastAttack >= 4) {
-			if (rc.isCoreReady()) {
+			if(rc.getRoundNum() % 5 != 3) {
+				tighten(policy);
+			}
+			if (rc.getRoundNum() % 5 == 3 && rc.isCoreReady()) {
 				int rot = (int)(Math.random() * 8);
 				Direction dirToMove = Direction.EAST;
 				for (int i = 0; i < rot; ++i)
 					dirToMove = dirToMove.rotateLeft();
 
 				for (int i = 0; i < 8; ++i) {
-					if (rc.canMove(dirToMove)) {
-						rc.move(dirToMove); break;
+					if (rc.isCoreReady()) {
+						Nav.goTo(myLocation.add(dirToMove), policy);
+						break;
 					}
 
 					dirToMove = dirToMove.rotateLeft();
+				}
+			}
+		}
+		if(rc.isCoreReady()) {
+			// if idle, clear some rubble
+			Direction dirToClear = Direction.EAST;
+			for(int k = 0; k < 8; ++k) {
+				MapLocation target = myLocation.add(dirToClear);
+				if(rc.isCoreReady() && rc.senseRubble(target) >= GameConstants.RUBBLE_SLOW_THRESH) {
+					rc.clearRubble(dirToClear);
+//					System.out.println("looking for rubble to clear");
 				}
 			}
 		}
@@ -156,8 +186,8 @@ public class Soldier extends Bot {
 	private static int[] teamMemberNeedsHelp = new int[32001]; // store what turn request was made
 
 	private static void processSignals() throws GameActionException {
-		IdAndMapLocation newDefend = null, newMove = null; int clearDefend = -1;
-		newDefend = Radio.getDefendLocation(); newMove = Radio.getMoveLocation(); clearDefend = Radio.getClearDefend();
+		IdAndMapLocation newDefend = null, newMove = null; int clearDefend = -1; int clearOrders = -1;
+		newDefend = Radio.getDefendLocation(); newMove = Radio.getMoveLocation(); clearDefend = Radio.getClearDefend(); clearOrders = Radio.getClear();
 		IdAndMapLocation newHQ = Radio.getMoveCampLocation();
 		if(newHQ != null) {
 			personalHQ = newHQ.location;
@@ -178,6 +208,9 @@ public class Soldier extends Bot {
 			teamMemberNeedsHelp[clearDefend] = 0;
 			clearDefend = Radio.getClearDefend();
 		}
+		while(clearOrders != -1) {
+			break; // not implemented yet
+		}
 	}
 
 	private static void moveSomewhere() throws GameActionException {
@@ -186,7 +219,7 @@ public class Soldier extends Bot {
 				int next = defendQueue.element();
 				if(teamMemberNeedsHelp[next] > 0 /* && rc.getRoundNum() - teamMemberNeedsHelp[next] < 200 */ ) {
 					if(rc.isCoreReady()) {
-						Nav.goTo(teamLocations[next]);
+						Nav.goTo(teamLocations[next], policy);
 					}
 					return;
 				}
@@ -196,7 +229,7 @@ public class Soldier extends Bot {
 		if(!moveQueue.isEmpty()) {
 			MapLocation next = moveQueue.element();
 			if(rc.isCoreReady()) {
-				Nav.goTo(next);
+				Nav.goTo(next, policy);
 			}
 			if(rc.canSense(next) && rc.senseRobotAtLocation(next) == null) {
 				moveQueue.remove();
@@ -204,7 +237,7 @@ public class Soldier extends Bot {
 			return;
 		}
 		if(rc.isCoreReady()) {
-			Nav.goTo(personalHQ);
+			Nav.goTo(personalHQ, policy);
 			return;
 		}
 	}

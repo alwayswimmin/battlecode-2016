@@ -523,7 +523,7 @@ public class Bot {
 		}
 	}
 
-	public static void tighten() throws GameActionException {
+	public static void tighten(SafetyPolicy policy) throws GameActionException {
 		RobotInfo[] friends = rc.senseNearbyRobots(100000, myTeam);
 		int friendCentroidX = 0, friendCentroidY = 0, friendCount = friends.length;
 		if(friendCount == 0) {
@@ -538,8 +538,12 @@ public class Bot {
 			return;
 		}
 		if(rc.isCoreReady()) {
-			Nav.goTo(friendCentroid);
+			Nav.goTo(friendCentroid, policy);
 		}
+	}
+
+	public static void tighten() throws GameActionException {
+		tighten(null);
 	}
 
 	protected static void init(RobotController _rc) throws GameActionException {

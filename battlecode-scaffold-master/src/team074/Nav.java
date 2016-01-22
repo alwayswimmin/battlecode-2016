@@ -33,6 +33,33 @@ class SPAll extends Bot implements SafetyPolicy {
 	}
 }
 
+// avoid short range units
+class SPShort extends Bot implements SafetyPolicy {
+	RobotInfo[] enemies;
+	public SPShort(RobotInfo[] _enemies) {
+		enemies = _enemies;
+	}
+
+	public boolean safe(MapLocation loc) {
+		for (int i = enemies.length; --i >= 0; ) {	
+			if(enemies[i].type == RobotType.ZOMBIEDEN) {
+				int dx = enemies[i].location.x - loc.x;
+				int dy = enemies[i].location.y - loc.y;
+				if(dx < 0) {
+					dx = -dx;
+				}
+				if(dy < 0) {
+					dy = -dy;
+				}
+				if(dx + dy <= 2 && dx != 2 && dy != 2) {
+					return false;
+				}
+			}
+		}
+		return true;
+	}
+}
+
 public class Nav extends Bot {
 
 	private static MapLocation dest;
@@ -213,11 +240,20 @@ public class Nav extends Bot {
 					}
 			}
 		}
+			
+			boolean goodSpotFound = false;
+			MapLocation[] neighborhood = MapLocation.getAllMapLocationsWithinRadiusSq(myLocation, SIGHT_RANGE);
+			for(int k = neighborhood.length; --k >= 0; ) {
+				if(rc.onTheMap(neighborhood[k]) && rc.senseRubble(neighborhood[k]) < threshold && neighborhood[k].distanceSquaredTo(dest) < myLocation.distanceSquaredTo(dest)) {
+					goodSpotFound = true;
+					break;
+				}
+			}
 
-		if(rc.canSense(dest) && rc.onTheMap(dest) && rubbleForward < 2000.5) {
-			rc.clearRubble(toDest);
-			return true;
-		}
+			if((goodSpotFound || rc.canSense(dest)) && rc.onTheMap(myLocation.add(toDest)) && rubbleForward < 2000.5) {
+				rc.clearRubble(toDest);
+				return true;
+			}
 
 		}
 
@@ -379,6 +415,8 @@ public class Nav extends Bot {
 		if(!_dest.equals(dest)) {
 			init(_dest, _policy);
 		}
+
+		policy = _policy;
 
 		if(myLocation.equals(dest)) {
 			return;

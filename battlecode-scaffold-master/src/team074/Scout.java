@@ -70,6 +70,15 @@ public class Scout extends Bot {
 		   }
 		*/
 
+		for(int i = enemiesWithinRange.length; --i >= 0; ) {
+			if(broadcastCount < 20 && (robotsEncountered[enemiesWithinRange[i].ID] == null || rc.getRoundNum() - turnBroadcasted[enemiesWithinRange[i].ID] > 100) && enemiesWithinRange[i].type == RobotType.ARCHON) {
+				robotsEncountered[enemiesWithinRange[i].ID] = enemiesWithinRange[i].type;
+				turnBroadcasted[enemiesWithinRange[i].ID] = rc.getRoundNum();
+				Radio.broadcastEnemyArchonLocation(enemiesWithinRange[i].location, 1000);
+				++broadcastCount;
+			}
+		}
+
 		for(int i = neutralsWithinRange.length; --i >= 0; ) {
 			if(broadcastCount < 20 && robotsEncountered[neutralsWithinRange[i].ID] == null) {
 				robotsEncountered[neutralsWithinRange[i].ID] = neutralsWithinRange[i].type;
