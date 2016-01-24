@@ -20,8 +20,8 @@ public class Soldier extends Bot {
 	private static void init() throws GameActionException {
 		// initializes soldier
 		personalHQ = rc.getLocation();
-		defendQueue = new LinkedList<Integer>();
-		moveQueue = new LinkedList<MapLocation>();
+		defendQueue = new MyQueue<Integer>();
+		moveQueue = new MyQueue<MapLocation>();
 		Radio.broadcastInitialStrategyRequest(10);
 /*		if(rc.getRoundNum() > 600) {
 			MapLocation[] initialEnemyArchonLocations = rc.getInitialArchonLocations(enemyTeam);
@@ -180,8 +180,8 @@ public class Soldier extends Bot {
 		turnsSinceLastAttack++;
 	}
 
-	private static LinkedList<Integer> defendQueue;
-	private static LinkedList<MapLocation> moveQueue;
+	private static MyQueue<Integer> defendQueue;
+	private static MyQueue<MapLocation> moveQueue;
 	private static MapLocation[] teamLocations = new MapLocation[32001];
 	private static int[] teamMemberNeedsHelp = new int[32001]; // store what turn request was made
 
