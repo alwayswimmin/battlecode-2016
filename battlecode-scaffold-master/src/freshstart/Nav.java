@@ -396,7 +396,11 @@ public class Nav extends Bot {
 				break;
 			}
 		}
-		wallOnRight = dest.distanceSquaredTo(myLocation.add(leftDir)) < dest.distanceSquaredTo(myLocation.add(rightDir));
+		if(Util.isAttacker(TYPE)) {
+			wallOnRight = ID % 2 == 0;
+		} else {
+			wallOnRight = dest.distanceSquaredTo(myLocation.add(leftDir)) < dest.distanceSquaredTo(myLocation.add(rightDir));
+		}
 		dir = wallOnRight ? leftDir : rightDir;
 	}
 

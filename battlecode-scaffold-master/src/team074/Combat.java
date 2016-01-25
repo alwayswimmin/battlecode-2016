@@ -1,4 +1,4 @@
-package freshstart;
+package team074;
 
 import battlecode.common.*;
 import java.util.*;

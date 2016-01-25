@@ -8,7 +8,11 @@ public class Soldier extends Bot {
 		Bot.init(_rc);
 		init();
 		while(true) {
-			action();
+			try {
+				action();
+			} catch(Exception e) {
+				
+			}
 			Clock.yield();
 		}
 	}
@@ -20,17 +24,21 @@ public class Soldier extends Bot {
 
 	private static void action() throws GameActionException {
 		updateHealth();
+		update();
 		Radio.process();
 		myLocation = rc.getLocation();
 		processSignals();
 		
-		if(Combat.target != null && myLocation.distanceSquaredTo(Combat.target) < 10) {
+		if(Combat.target != null && myLocation.distanceSquaredTo(Combat.target) < SIGHT_RANGE) {
 			RobotInfo robotAtTarget = rc.senseRobotAtLocation(Combat.target);
 			if(robotAtTarget == null || robotAtTarget.team == Team.NEUTRAL || robotAtTarget.team == myTeam) {
 				setTarget(personalHQ); // nothing to see here, go home
 			}
 		}
 
+		if(Combat.target != null) {
+			rc.setIndicatorString(0, Combat.target.x + ", " + Combat.target.y);
+		}
 		Combat.action(); // micro attacks
 
 		Radio.clear();

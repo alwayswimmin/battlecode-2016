@@ -13,6 +13,8 @@ public class Bot {
 	protected static MapLocation personalHQ; // where to go when not on mission
 	protected static int strategy;
 
+	public static RobotInfo INFO;
+
 	public static RobotType TYPE;
 	public static int ID;
 	public static int SIGHT_RANGE;
@@ -564,9 +566,16 @@ public class Bot {
 		ATTACK_RANGE = TYPE.attackRadiusSquared;
 		MAX_HEALTH = TYPE.maxHealth;
 
+		update();
+
 		directions[0] = Direction.EAST;
 		for (int i = 1; i < 8; ++i) {
 			directions[i] = directions[i-1].rotateLeft();
 		}
+	}
+
+	protected static void update() throws GameActionException {
+		TYPE = rc.getType();
+		INFO = new RobotInfo(rc.getID(), rc.getTeam(), TYPE, rc.getLocation(), rc.getCoreDelay(), rc.getWeaponDelay(), TYPE.attackPower, rc.getHealth(), TYPE.maxHealth, rc.getZombieInfectedTurns(), rc.getViperInfectedTurns());
 	}
 }

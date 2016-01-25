@@ -168,7 +168,7 @@ public class Archon extends Bot {
 		// 3: SOLDIER
 		// 4: TURRET/TTM
 		// 5: VIPER
-		if((rc.getRoundNum() > 200 || shouldBuildScoutsInitially) && (unitsOfTypeBuilt[2] < 1 || Math.random() > 0.95)) {
+		if((rc.getRoundNum() > 200 || shouldBuildScoutsInitially) && (unitsOfTypeBuilt[2] < 1 || Math.random() > 0.90)) {
 			typeToBuild = 2;
 		} else if(Math.random() > 0.85) {
 			typeToBuild = 5;
@@ -582,7 +582,7 @@ public class Archon extends Bot {
 
 	private static void seekEnemy(MapLocation location) throws GameActionException {
 		if(target == null || !target.equals(location) || rc.getRoundNum() % 50 == 0) {
-			Radio.broadcastMoveLocation(location, 1000);
+			Radio.broadcastMoveLocation(new MapLocation(6 * location.x - myLocation.x, 6 * location.y - myLocation.y), 1000);
 			target = location;
 		}
 		if(rc.isCoreReady()) {

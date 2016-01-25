@@ -4,21 +4,33 @@ import battlecode.common.*;
 import java.util.*;
 
 public class Archon extends Bot {
-	private static int scoutsBuilt = 0;
 	private static int forcedMoveCounter = 0; // when Archon is forced to move in a fixed direction
 	private static Direction forcedMoveDir;
-	private static MapLocation neutralLocation = null;
-	private static MapLocation partsLocation = null;
-	private static MyQueue<MapLocation> moveQueue;
-	private static MyQueue<MapLocation> neutralQueue;
-	private static MyQueue<MapLocation> partsQueue;
 
-	private static int radiusLimit = 4;
-	private static IdAndMapLocation den = null;
-	private static IdAndMapLocation enemyArchon = null;
+	private static boolean shouldBuildScoutsInitially = true;
+	private static MapLocation[] initialEnemyArchonLocations;
+	private static MapLocation[] initialMyArchonLocations;
+
+	private static MapLocation[] dens = new MapLocation[100];
+	private static boolean[] denVisited = new boolean[100];
+	private static int numberOfDens = 0;
+
+	private static MapLocation[] neutrals = new MapLocation[100];
+	private static boolean[] neutralVisited = new boolean[100];
+	private static int numberOfNeutrals = 0;
+
+	private static MapLocation[] parts = new MapLocation[100];
+	private static boolean[] partsVisited = new boolean[100];
+	private static int numberOfParts = 0;
+
+	// can have duplicates, since archons move; this functions more as a cyclic stack
+	private static MapLocation[] enemyArchons = new MapLocation[100];
+	private static boolean[] enemyArchonVisited = new boolean[100];
+	private static int numberOfEnemyArchons = 0;
+
+	// for running away
 	private static int turnsSinceEnemySeen = 100;
 	private static int consecutiveTurnsOfEnemy = 0;
-	private static int turnsSinceLastAccompanyOrder = 100;
 
 	// 0: ARCHON
 	// 1: GUARD
@@ -35,7 +47,7 @@ public class Archon extends Bot {
 		RobotType.VIPER
 	};
 
-	private static int[] unitsOfTypeBuilt = {1, 0, 0, 0, 0, 0}; // includes activated units
+	private static int[] unitsOfTypeBuilt = {1, 0, 0, 0, 0, 0}; // includes self and activated units
 
 	public static void run(RobotController _rc) throws GameActionException {
 		Bot.init(_rc);
@@ -49,17 +61,12 @@ public class Archon extends Bot {
 		}
 	}
 
-	private static boolean shouldBuildScoutsInitially = true;
-
 	private static void init() throws GameActionException {
 		// initializes Archon
 		personalHQ = rc.getLocation();
-		neutralQueue = new MyQueue<MapLocation>();
-		partsQueue = new MyQueue<MapLocation>();
-		
-		moveQueue = new MyQueue<MapLocation>();
 
-		MapLocation[] initialEnemyArchonLocations = rc.getInitialArchonLocations(enemyTeam);
+		initialMyArchonLocations = rc.getInitialArchonLocations(myTeam);
+		initialEnemyArchonLocations = rc.getInitialArchonLocations(enemyTeam);
 		for(int i = 0; i < initialEnemyArchonLocations.length; ++i) {
 			if(initialEnemyArchonLocations[i].distanceSquaredTo(myLocation) < 200) {
 				shouldBuildScoutsInitially = false;
@@ -71,36 +78,17 @@ public class Archon extends Bot {
 	}
 
 	private static void action() throws GameActionException {
-		// takes turn in following order:
-		//     makes forced moves if necessary
-		//     heals friends
-		//     processes enemies (and possibly calls to defend)
-		//     strategy 0: builds turrets and scouts
-		//         processes signals
-		//         activates neutrals if possible
-		//         runs away from enemies if necessary
-		//         tries to build new robots
-		//         moves randomly without wandering too far from personal HQ
-		//     strategy 1:
-		//         processes signals
-		//         activates neutrals if possible
-		//         runs away from enemies if necessary
-		//         tries to build new robots
-		//         tries to move to parts and neutrals
-		//         moves randomly
 
+		// moved pretty far from my initial position; tell units to come to new location rather than report to old
 		myLocation = rc.getLocation();
-		if(rc.getRoundNum() == 600) {
+		if(myLocation.distanceSquaredTo(personalHQ) > 35) {
 			personalHQ = myLocation;
+			Radio.broadcastMoveCampLocation(myLocation, 1000);
 		}
-		if(rc.getRoundNum() == 2000) {
-			MapLocation[] initialEnemyArchonLocations = rc.getInitialArchonLocations(enemyTeam);
-			for(int i = 0; i < initialEnemyArchonLocations.length; ++i) {
-				Radio.broadcastMoveLocation(initialEnemyArchonLocations[i], 1000);
-				moveQueue.add(initialEnemyArchonLocations[i]);
-			}
-		}
+		updateVisited();
+
 		// make forced moves if forced move counter is non-zero
+		// implemented by yang for running away from corners
 		if(forcedMoveCounter > 0 && rc.isCoreReady()) {
 			forcedMoveCounter--;
 			if(rc.canMove(forcedMoveDir)) {
@@ -119,9 +107,10 @@ public class Archon extends Bot {
 
 		RobotInfo[] hostileWithinRange = rc.senseHostileRobots(myLocation, SIGHT_RANGE);
 		RobotInfo[] neutralWithinRange = rc.senseNearbyRobots(SIGHT_RANGE, Team.NEUTRAL);
-		RobotInfo[] friendWithinRange = rc.senseNearbyRobots(SIGHT_RANGE, rc.getTeam());
+		RobotInfo[] friendWithinRange = rc.senseNearbyRobots(SIGHT_RANGE, myTeam);
 
 		// processes friends and tries to heal them
+		// TODO: some metric for best friend to heal
 		for(int i = 0; i < friendWithinRange.length; ++i) {
 			if(friendWithinRange[i].health != friendWithinRange[i].maxHealth && 
 					(ATTACK_RANGE > distanceBetween(rc.getLocation(), friendWithinRange[i].location)) 
@@ -136,6 +125,7 @@ public class Archon extends Bot {
 
 		if(hostileWithinRange.length != 0) {
 			// if enemies in range, call friends to defend
+			// TODO: change to run in direction that maximizes distance, to prevent getting trapped against walls
 			int enemyCount = hostileWithinRange.length;
 			if(turnsSinceEnemySeen > 5) { // waits at least 5 turns between broadcasts
 				Radio.broadcastDefendLocation(myLocation, 1000);
@@ -149,35 +139,16 @@ public class Archon extends Bot {
 			}
 			enemyCentroid = new MapLocation(enemyCentroidX / enemyCount, enemyCentroidY / enemyCount);
 		} else {
+			// no enemies seen
 			turnsSinceEnemySeen++;
 			consecutiveTurnsOfEnemy = 0;
 			if(turnsSinceEnemySeen == 15) {
 				Radio.broadcastClearDefend(1000);
+				// stop defending 
 			}
 		}
-			// send friends to den, enemy archon
-			IdAndMapLocation newDen = Radio.getDenLocation();
-			if(newDen != null) {
-				den = newDen;
-				Radio.broadcastMoveLocation(den.location, 1000);
-				Radio.broadcastMoveLocation(myLocation, 1000);
-			}
-//			if(den != null && friendWithinRange.length > 5 && rc.getRoundNum() % 50 == 0) {
-//				Radio.broadcastMoveLocation(den.location, 1000);
-//				Radio.broadcastMoveLocation(myLocation, 1000);
-//				moveQueue.add(den.location);
-//			}
-			IdAndMapLocation newEnemyArchon = Radio.getEnemyArchonLocation();
-			if(newEnemyArchon != null) {
-				enemyArchon = newEnemyArchon;
-			}
-//			if(enemyArchon != null && friendWithinRange.length > 5 && rc.getRoundNum() > 1000 && rc.getRoundNum() % 50 == 0) {
-//				Radio.broadcastMoveLocation(enemyArchon.location, 1000);
-//				Radio.broadcastMoveLocation(myLocation, 1000);
-//				moveQueue.add(enemyArchon.location);
-//			}
 
-		// finds neutrals to activate
+		// process if a neutral around us can be activated
 		int canActivate = -1;
 		for(int i = 0; i < neutralWithinRange.length; ++i) {
 			if(distanceBetween(rc.getLocation(), neutralWithinRange[i].location) < 3) {
@@ -187,254 +158,125 @@ public class Archon extends Bot {
 
 		int typeToBuild;
 		boolean addedRobot;
-		switch(strategy) {
-			case -1:
-				// assign a strategy to Archon
-				
-/*
-				if(rc.getTeamParts() >= 300) {
-					strategy = 0;
-				} else {
-					strategy = 1;
+
+		// get information from scouts, give strategy assignments
+		processSignals();
+
+		// 0: ARCHON
+		// 1: GUARD
+		// 2: SCOUT
+		// 3: SOLDIER
+		// 4: TURRET/TTM
+		// 5: VIPER
+		if((rc.getRoundNum() > 200 || shouldBuildScoutsInitially) && (unitsOfTypeBuilt[2] < 1 || Math.random() > 0.90)) {
+			typeToBuild = 2;
+		} else if(Math.random() > 0.85) {
+			typeToBuild = 5;
+			// typeToBuild = 3; // actually don't build vipers for now
+		} else if(rc.getRoundNum() > 300 && Math.random() > 0.70) {
+			// typeToBuild = 1;
+			typeToBuild = 3; // actually don't build guards for now, or probably ever
+		} else {
+			typeToBuild = 3;
+		}
+		boolean runAwayOverride = consecutiveTurnsOfEnemy % 20 > 15;
+		if(runAwayOverride) {
+			typeToBuild = 3;
+			runAwayOverride = false;
+			for(int k = hostileWithinRange.length; --k >= 0; ) {
+				if(hostileWithinRange[k].type == RobotType.FASTZOMBIE) {
+					// not going to outrun, try to fight off the zombie, or at the very least slow it down
+					runAwayOverride = true;
+					break;
 				}
-*/
-				strategy = 1;
-				action();
-				break;
-			case 0:
-				processSignals();
-				// 0: ARCHON
-				// 1: GUARD
-				// 2: SCOUT
-				// 3: SOLDIER
-				// 4: TURRET/TTM
-				// 5: VIPER
-				if(scoutsBuilt++ < 2){ // incrementing here seems buggy
-					typeToBuild = 4;
-				} else if(Math.random() > 0.8){
-					typeToBuild = 2;
-				} else {
-					typeToBuild = 4;
+			}
+		}
+		addedRobot = false;
+		if(rc.isCoreReady()) {
+			// activates neutrals if possible
+			if(canActivate > -1) {
+				rc.activate(neutralWithinRange[canActivate].location);
+				switch(neutralWithinRange[canActivate].type) {
+					case ARCHON:
+						typeToBuild = 0;
+						break;
+					case GUARD:
+						typeToBuild = 1;
+						break;
+					case SCOUT:
+						typeToBuild = 2;
+						break;
+					case SOLDIER:
+						typeToBuild = 3;
+						break;
+					case TURRET:
+					case TTM:
+						typeToBuild = 4;
+						break;
+					case VIPER:
+						typeToBuild = 5;
+						break;
+					default:
+						break;
 				}
-				addedRobot = false;
-				if(rc.isCoreReady()) {
-					// activates neutrals if possible
-					if(canActivate > -1) {
-						rc.activate(neutralWithinRange[canActivate].location);
-						switch(neutralWithinRange[canActivate].type) {
-							case ARCHON:
-								typeToBuild = 0;
-								break;
-							case GUARD:
-								typeToBuild = 1;
-								break;
-							case SCOUT:
-								typeToBuild = 2;
-								break;
-							case SOLDIER:
-								typeToBuild = 3;
-								break;
-							case TURRET:
-							case TTM:
-								typeToBuild = 4;
-								break;
-							case VIPER:
-								typeToBuild = 5;
-								break;
-							default:
-								break;
-						}
+				unitsOfTypeBuilt[typeToBuild]++;
+				addedRobot = true;
+			} else if(!runAwayOverride && enemyCentroid != null && !enemyCentroid.equals(myLocation)) {
+				// if enemies are around, runs away from enemies
+				// TODO: replace with new enemy avoidance strategy
+				int dx = myLocation.x - enemyCentroid.x;
+				int dy = myLocation.y - enemyCentroid.y;
+				MapLocation dest = new MapLocation(myLocation.x + 3 * dx, myLocation.y + 3 * dy);
+				Nav.goTo(dest, new SPAll(hostileWithinRange));
+			} else if(typeToBuild != -1 && rc.hasBuildRequirements(robotTypes[typeToBuild]) && (rc.getRoundNum() < 550 || rc.getTeamParts() > 130)) {
+				// tries to build new robots
+				Direction dirToBuild = Direction.EAST;
+				for(int i = 0; i < 8; i++) {
+					if(rc.canBuild(dirToBuild, robotTypes[typeToBuild])) {
+						rc.build(dirToBuild, robotTypes[typeToBuild]);
 						unitsOfTypeBuilt[typeToBuild]++;
 						addedRobot = true;
-					} else if(enemyCentroid != null && !enemyCentroid.equals(myLocation)) {
-						// if enemies are around, runs away from enemies
-						int dx = myLocation.x - enemyCentroid.x;
-						int dy = myLocation.y - enemyCentroid.y;
-						MapLocation dest = new MapLocation(myLocation.x + 3 * dx, myLocation.y + 3 * dy);
-						boolean[] closeTo = {false, false, false, false};
-						Direction goTo = directions[1];
-						for(int i = 0; i < 8; i += 2) {
-							closeTo[i/2] = (distToWall(rc.getLocation(), directions[i]) <= 2);
-						}
-						for(int i = 0; i < 4; ++i) {
-							if(closeTo[i] && closeTo[(i + 1) % 4]){
-								goTo = directions[(2 * i + 4) % 8];
-							}
-						}
-						MapLocation opt1 = new MapLocation(0, 0).add(goTo);
-						MapLocation opt2 = new MapLocation(0, 0).add(goTo.rotateLeft().rotateLeft());
-						Direction bestDirection;
-						if(distanceBetween(opt1, dest) <= distanceBetween(opt2, dest)){
-							bestDirection = goTo;
-						} else {
-							bestDirection = goTo.rotateLeft().rotateLeft();
-						}
-						if(goTo != directions[1] && rc.canMove(bestDirection)) {
-							rc.move(bestDirection);
-							forcedMoveDir = bestDirection;
-							forcedMoveCounter = 8;
-						} else {
-							Nav.goTo(dest, new SPAll(hostileWithinRange));
-						}
-					} else if(rc.hasBuildRequirements(robotTypes[typeToBuild])) {
-						// tries to build new robots
-						Direction dirToBuild = Direction.EAST;
-						if((rc.getRoundNum() <= 20 || rc.getRoundNum() > 600) && rc.getTeamParts() > 131){
-							for(int i = 0; i < 8; i++) {
-								MapLocation buildLocation = myLocation.add(dirToBuild);
-								if(rc.canBuild(dirToBuild, robotTypes[typeToBuild]) && (buildLocation.x + buildLocation.y) % 2 == 1) {
-									rc.build(dirToBuild, robotTypes[typeToBuild]);
-									unitsOfTypeBuilt[typeToBuild]++;
-									addedRobot = true;
-									break;
-								} else {
-									dirToBuild = dirToBuild.rotateLeft();
-								}
-							}
-						}
-					}
-					// moves randomly without wandering too far from personal HQ
-					if(rc.isCoreReady() && personalHQ != null) {
-						if(rc.isCoreReady()) {
-							int rot = (int)(Math.random() * 8);
-							Direction dirToMove = Direction.EAST;
-							for(int i = 0; i < rot; ++i){
-								dirToMove = dirToMove.rotateLeft();
-							}
-							for(int i = 0; i < 8; i++) {
-								MapLocation dest = myLocation.add(dirToMove);
-								if(rc.canMove(dirToMove) && dest.distanceSquaredTo(personalHQ) < radiusLimit) {
-									Nav.goTo(dest);
-									break;
-								}
-								dirToMove = dirToMove.rotateLeft();
-							}
-						}
+						break;
+					} else {
+						dirToBuild = dirToBuild.rotateLeft();
 					}
 				}
-				if(rc.getRoundNum() % 50 == 0) {
-					radiusLimit++;
+			} else if(rc.isCoreReady()) {
+				// tries to move to neutrals and parts
+				if(neutralWithinRange.length > 0) {
+					Nav.goTo(neutralWithinRange[0].location);
 				}
-				break;
-			case 1:
-				processSignals();
-				// 0: ARCHON
-				// 1: GUARD
-				// 2: SCOUT
-				// 3: SOLDIER
-				// 4: TURRET/TTM
-				// 5: VIPER
-				if((rc.getRoundNum() > 200 || shouldBuildScoutsInitially) && (unitsOfTypeBuilt[2] < 1 || Math.random() > 0.95)) {
-					typeToBuild = 2;
-				} else if(Math.random() > 0.85) {
-					typeToBuild = 5;
-					// typeToBuild = 3; // actually don't build vipers for now
-				} else if(rc.getRoundNum() > 300 && Math.random() > 0.70) {
-					// typeToBuild = 1;
-					typeToBuild = 3; // actually don't build guards for now
-				} else {
-					typeToBuild = 3;
-				}
-				boolean runAwayOverride = consecutiveTurnsOfEnemy % 20 > 15;
-				if(runAwayOverride) {
-					typeToBuild = 3;
-				}
-				addedRobot = false;
 				if(rc.isCoreReady()) {
-					// activates neutrals if possible
-					if(canActivate > -1) {
-						rc.activate(neutralWithinRange[canActivate].location);
-						switch(neutralWithinRange[canActivate].type) {
-							case ARCHON:
-								typeToBuild = 0;
-								break;
-							case GUARD:
-								typeToBuild = 1;
-								break;
-							case SCOUT:
-								typeToBuild = 2;
-								break;
-							case SOLDIER:
-								typeToBuild = 3;
-								break;
-							case TURRET:
-							case TTM:
-								typeToBuild = 4;
-								break;
-							case VIPER:
-								typeToBuild = 5;
-								break;
-							default:
-								break;
-						}
-						unitsOfTypeBuilt[typeToBuild]++;
-						addedRobot = true;
-					} else if(!runAwayOverride && enemyCentroid != null && !enemyCentroid.equals(myLocation)) {
-						// if enemies are around, runs away from enemies
-						int dx = myLocation.x - enemyCentroid.x;
-						int dy = myLocation.y - enemyCentroid.y;
-						MapLocation dest = new MapLocation(myLocation.x + 3 * dx, myLocation.y + 3 * dy);
-						Nav.goTo(dest, new SPAll(hostileWithinRange));
-					} else if(typeToBuild != -1 && rc.hasBuildRequirements(robotTypes[typeToBuild]) && (rc.getRoundNum() < 550 || rc.getTeamParts() > 130)) {
-						// tries to build new robots
-						Direction dirToBuild = Direction.EAST;
-						for(int i = 0; i < 8; i++) {
-							if(rc.canBuild(dirToBuild, robotTypes[typeToBuild])) {
-								rc.build(dirToBuild, robotTypes[typeToBuild]);
-								unitsOfTypeBuilt[typeToBuild]++;
-								addedRobot = true;
-								break;
-							} else {
-								dirToBuild = dirToBuild.rotateLeft();
+					MapLocation[] partsLocations = rc.sensePartLocations(SIGHT_RANGE);
+					if(partsLocations.length > 0) {
+						int maxindex = 0;
+						for(int i = partsLocations.length; --i > 0; ) {
+							if(rc.senseParts(partsLocations[i]) > rc.senseParts(partsLocations[maxindex])) {
+								maxindex = i;
 							}
 						}
-					} else if(rc.isCoreReady()) {
-						// tries to move to neutrals and parts
-						if(neutralWithinRange.length > 0) {
-							Nav.goTo(neutralWithinRange[0].location);
-							if(turnsSinceLastAccompanyOrder >= 100) {
-								Radio.broadcastMoveLocation(neutralWithinRange[0].location, 1000);
-								turnsSinceLastAccompanyOrder = 0;
-							}
-						}
-						if(rc.isCoreReady()) {
-							MapLocation[] partsLocations = rc.sensePartLocations(SIGHT_RANGE);
-							if(partsLocations.length > 0) {
-								int maxindex = 0;
-								for(int i = partsLocations.length; --i > 0; ) {
-									if(rc.senseParts(partsLocations[i]) > rc.senseParts(partsLocations[maxindex])) {
-										maxindex = i;
-									}
-								}
-								Nav.goTo(partsLocations[maxindex]);
-								if(turnsSinceLastAccompanyOrder >= 100) {
-									Radio.broadcastMoveLocation(partsLocations[maxindex], 1000);
-									turnsSinceLastAccompanyOrder = 0;
-								}
-							}
-						}
-						if(rc.isCoreReady()) {
-							moveSomewhere();
-						}
+						Nav.goTo(partsLocations[maxindex]);
 					}
 				}
-				turnsSinceLastAccompanyOrder++;
-				// moves randomly
-				if(rc.isCoreReady()) {
-					int rot = (int)(Math.random() * 8);
-					Direction dirToMove = Direction.EAST;
-					for(int i = 0; i < rot; ++i){
-						dirToMove = dirToMove.rotateLeft();
-					}
-					for(int i = 0; i < 8; ++i) {
-						if(rc.canMove(dirToMove)) {
-							Nav.goTo(myLocation.add(dirToMove));
-							break;
-						}
-						dirToMove = dirToMove.rotateLeft();
-					}
+			}
+		}
+		// idle, so move somewhere strategic
+		moveSomewhere();
+
+		// moves randomly
+		if(rc.isCoreReady()) {
+			int rot = (int)(Math.random() * 8);
+			Direction dirToMove = Direction.EAST;
+			for(int i = 0; i < rot; ++i){
+				dirToMove = dirToMove.rotateLeft();
+			}
+			for(int i = 0; i < 8; ++i) {
+				if(rc.canMove(dirToMove)) {
+					Nav.goTo(myLocation.add(dirToMove));
+					break;
 				}
-				break;
+				dirToMove = dirToMove.rotateLeft();
+			}
 		}
 	}
 
@@ -478,67 +320,295 @@ public class Archon extends Bot {
 			Radio.broadcastStrategyAssignment(determineStrategy(requestingRobotTypeInt), 10);
 			strategyRequest = Radio.getInitialStrategyRequest();
 		}
-		IdAndMapLocation newNeutral = null, newParts = null;
-		newNeutral = Radio.getNeutralLocation(); newParts = Radio.getPartsLocation();
-		while(newNeutral != null) {
-			neutralQueue.add(newNeutral.location);
-			newNeutral = Radio.getDefendLocation();
+		// process incoming scout information concerning dens
+		IdAndMapLocation newDen = Radio.getDenLocation();
+		while(newDen != null) {
+			boolean isNotReallyNewDen = false;
+			for(int i = numberOfDens; --i >= 0; ) {
+				if(newDen.location.equals(dens[i])) {
+					isNotReallyNewDen = true;
+					break;
+				}
+			}
+			if(!isNotReallyNewDen) {
+				// yay for double negative
+				// add to known den locations
+				dens[numberOfDens] = newDen.location;
+				denVisited[numberOfDens] = false;
+				numberOfDens++;
+			}
+			// read in another den
+			newDen = Radio.getDenLocation();
 		}
+
+		// process incoming scout information concerning enemy archons
+		IdAndMapLocation newEnemyArchon = Radio.getEnemyArchonLocation();
+		while(newEnemyArchon != null) {
+			// add to known archon footprint
+			enemyArchons[numberOfEnemyArchons] = newEnemyArchon.location;
+			enemyArchonVisited[numberOfEnemyArchons] = false;
+			numberOfEnemyArchons++;
+			// read in another den
+			newEnemyArchon = Radio.getEnemyArchonLocation();
+		}
+
+		// process incoming scout information concerning neutrals
+		IdAndMapLocation newNeutral = Radio.getNeutralLocation(); 
+		while(newNeutral != null) {
+			boolean isNotReallyNewNeutral = false;
+			for(int i = numberOfNeutrals; --i >= 0; ) {
+				if(newNeutral.location.equals(neutrals[i])) {
+					isNotReallyNewNeutral = true;
+					break;
+				}
+			}
+			if(!isNotReallyNewNeutral) {
+				// yay for double negative
+				// add to known den locations
+				neutrals[numberOfNeutrals] = newNeutral.location;
+				neutralVisited[numberOfNeutrals] = false;
+				numberOfNeutrals++;
+			}
+			// read in another neutral
+			newNeutral = Radio.getNeutralLocation();
+		}
+
+		// process incoming scout information concerning parts
+		IdAndMapLocation newParts = Radio.getPartsLocation();
 		while(newParts != null) {
-			partsQueue.add(newParts.location);
+			boolean isNotReallyNewParts = false;
+			for(int i = numberOfParts; --i >= 0; ) {
+				if(newParts.location.equals(parts[i])) {
+					isNotReallyNewParts = true;
+					break;
+				}
+			}
+			if(!isNotReallyNewParts) {
+				// yay for double negative
+				// add to known den locations
+				parts[numberOfParts] = newParts.location;
+				partsVisited[numberOfParts] = false;
+				numberOfParts++;
+			}
+			// read in another part location
 			newParts = Radio.getPartsLocation();
 		}
 	}
 
-	private static void moveSomewhere() throws GameActionException {
-		// moves towards neutrals and parts received via radio
-		while(!neutralQueue.isEmpty()) {
-			MapLocation next = neutralQueue.element();
-			if(rc.isCoreReady()) {
-				Nav.goTo(next);
-				if(turnsSinceLastAccompanyOrder >= 100) {
-					Radio.broadcastMoveLocation(next, 1000);
-					turnsSinceLastAccompanyOrder = 0;
+	private static void updateVisited() throws GameActionException {
+		for(int i = numberOfDens; --i >= 0; ) {
+			if(rc.canSense(dens[i])) {
+				RobotInfo robotAtLocation = rc.senseRobotAtLocation(dens[i]);
+				if(robotAtLocation == null || robotAtLocation.type != RobotType.ZOMBIEDEN) {
+					denVisited[i] = true;
 				}
 			}
-			if(rc.canSense(next)) {
-				neutralQueue.remove();
-			}
-			return;
 		}
-		if(!partsQueue.isEmpty()) {
-			MapLocation next = partsQueue.element();
-			if(rc.isCoreReady()) {
-				Nav.goTo(next);
-				if(turnsSinceLastAccompanyOrder >= 100) {
-					Radio.broadcastMoveLocation(next, 1000);
-					turnsSinceLastAccompanyOrder = 0;
+		for(int i = numberOfParts; --i >= 0; ) {
+			if(rc.canSense(parts[i])) {
+				double partValue = rc.senseParts(parts[i]);
+				if(partValue < 5.0) {
+					partsVisited[i] = true;
 				}
 			}
-			if(rc.canSense(next)) {
-				partsQueue.remove();
-			}
-			return;
 		}
-		if(!moveQueue.isEmpty()) {
-			MapLocation next = moveQueue.element();
-			if(rc.isCoreReady()) {
-				Nav.goTo(next);
-				if(turnsSinceLastAccompanyOrder >= 100) {
-					Radio.broadcastMoveLocation(next, 1000);
-					turnsSinceLastAccompanyOrder = 0;
+		for(int i = numberOfNeutrals; --i >= 0; ) {
+			if(rc.canSense(neutrals[i])) {
+				RobotInfo robotAtLocation = rc.senseRobotAtLocation(neutrals[i]);
+				if(robotAtLocation == null || robotAtLocation.team != Team.NEUTRAL) {
+					neutralVisited[i] = true;
 				}
 			}
-			if(rc.canSense(next) && rc.senseRobotAtLocation(next) == null) {
-				moveQueue.remove();
-			}
-			return;
 		}
-//		if(den != null) {
-//			Nav.goTo(den.location);
-//		}
+		for(int i = numberOfEnemyArchons; --i >= 0; ) {
+			if(myLocation.distanceSquaredTo(enemyArchons[i]) <= 16) {
+				RobotInfo robotAtLocation = rc.senseRobotAtLocation(enemyArchons[i]);
+				if(robotAtLocation == null || robotAtLocation.team != enemyTeam) {
+					enemyArchonVisited[i] = true;
+				}
+			}
+		}
 	}
 
+	private static void moveSomewhere() throws GameActionException {
+		// moves towards dens and neutrals and parts received via radio
+		int closestDenIndex = -1;
+		int bestDistanceToDen = 1000000;
+		for(int i = numberOfDens; --i >= 0; ) {
+			if(denVisited[i]) {
+				// this den was already taken down, don't go there again
+				continue;
+			}
+			int distanceToDen = myLocation.distanceSquaredTo(dens[i]);
+			// check to make sure that den targets us and not enemy archons; if it targets enemy archons, usually not worth taking down, unless we're right next to it
+			boolean targetsUs = true;
+			for(int j = initialEnemyArchonLocations.length; --j >= 0; ) {
+				if(initialEnemyArchonLocations[j].distanceSquaredTo(dens[i]) < distanceToDen) {
+					targetsUs = false;
+					break;
+				}
+			}
+			if(targetsUs || distanceToDen <= 100) { // even if the den targets the enemy, if we're 10 steps away, we should take it down anyway
+				if(closestDenIndex == -1 || distanceToDen < bestDistanceToDen) {
+					closestDenIndex = i;
+					bestDistanceToDen = distanceToDen;
+				}
+			}
+		}
+
+		int closestPartsIndex = -1;
+		int bestDistanceToParts = 1000000;
+		for(int i = numberOfParts; --i >= 0; ) {
+			if(partsVisited[i]) {
+				// these parts were already taken, don't go here again
+				continue;
+			}
+			int distanceToParts = myLocation.distanceSquaredTo(parts[i]);
+			if(closestPartsIndex == -1 || distanceToParts < bestDistanceToParts) {
+				closestPartsIndex = i;
+				bestDistanceToParts = distanceToParts;
+			}
+		}
+
+		int closestNeutralIndex = -1;
+		int bestDistanceToNeutral = 1000000;
+		for(int i = numberOfNeutrals; --i >= 0; ) {
+			if(neutralVisited[i]) {
+				// this neutral were already activated, don't go here again
+				continue;
+			}
+			int distanceToNeutral = myLocation.distanceSquaredTo(neutrals[i]);
+			if(closestNeutralIndex == -1 || distanceToNeutral < bestDistanceToNeutral) {
+				closestNeutralIndex = i;
+				bestDistanceToNeutral = distanceToNeutral;
+			}
+		}
+
+		int closestEnemyArchonIndex = -1;
+		int bestDistanceToEnemyArchon = 1000000;
+		for(int i = numberOfEnemyArchons, j = 4; --i >= 0 && --j >= 0; ) {
+			if(enemyArchonVisited[i]) {
+				// this enemy was already visited, don't go here again
+				continue;
+			}
+			int distanceToEnemyArchon = myLocation.distanceSquaredTo(enemyArchons[i]);
+			if(closestEnemyArchonIndex == -1 || distanceToEnemyArchon < bestDistanceToEnemyArchon) {
+				closestEnemyArchonIndex = i;
+				bestDistanceToEnemyArchon = distanceToEnemyArchon;
+			}
+		}
+
+		// hard ignore enemies if round is premature
+		if(rc.getRoundNum() < 1500) {
+			closestEnemyArchonIndex = -1;
+			bestDistanceToEnemyArchon = 1000000;
+		}
+
+		if(closestDenIndex == -1 && closestPartsIndex == -1 && closestNeutralIndex == -1 && closestEnemyArchonIndex == -1) {
+			// nothing scouts have reported that we haven't seen already
+			return;
+		}
+
+		if(bestDistanceToDen <= 100) {
+			// we are close to den, go there first
+			seekDen(dens[closestDenIndex]);
+			return;
+		}
+
+		if(bestDistanceToNeutral <= 100) {
+			// we are close to neutral, go there first
+			seekNeutral(neutrals[closestNeutralIndex]);
+			return;
+		}
+
+		if(bestDistanceToDen < bestDistanceToParts) {
+			if(bestDistanceToDen < bestDistanceToNeutral) {
+				if(bestDistanceToDen < bestDistanceToEnemyArchon) {
+					// den is closest object
+					seekDen(dens[closestDenIndex]);
+					return;
+				} else {
+					// enemy is closest object
+					seekEnemy(enemyArchons[closestEnemyArchonIndex]);
+					return;
+				}
+			} else {
+				if(bestDistanceToNeutral < bestDistanceToEnemyArchon) {
+					// neutral is closest object
+					seekNeutral(neutrals[closestNeutralIndex]);
+					return;
+				} else {
+					// enemy is closest object
+					seekEnemy(enemyArchons[closestEnemyArchonIndex]);
+					return;
+				}
+			}
+		} else {
+			if(bestDistanceToParts < bestDistanceToNeutral) {
+				if(bestDistanceToParts < bestDistanceToEnemyArchon) {
+					// parts is closest object
+					seekParts(parts[closestPartsIndex]);
+					return;
+				} else {
+					// enemy is closest object
+					seekEnemy(enemyArchons[closestEnemyArchonIndex]);
+					return;
+				}
+			} else {
+				if(bestDistanceToNeutral < bestDistanceToEnemyArchon) {
+					// neutral is closest object
+					seekNeutral(neutrals[closestNeutralIndex]);
+					return;
+				} else {
+					// enemy is closest object
+					seekEnemy(enemyArchons[closestEnemyArchonIndex]);
+					return;
+				}
+			}
+		}
+	}
+
+	private static MapLocation target = null;
+
+	private static void seekDen(MapLocation location) throws GameActionException {
+		if(target == null || !target.equals(location) || rc.getRoundNum() % 50 == 0) {
+			Radio.broadcastMoveLocation(location, 100);
+			target = location;
+		}
+		if(rc.isCoreReady()) {
+			Nav.goTo(target);
+		}
+	}
+
+	private static void seekEnemy(MapLocation location) throws GameActionException {
+		if(target == null || !target.equals(location) || rc.getRoundNum() % 50 == 0) {
+			Radio.broadcastMoveLocation(new MapLocation(6 * location.x - myLocation.x, 6 * location.y - myLocation.y), 1000);
+			target = location;
+		}
+		if(rc.isCoreReady()) {
+			Nav.goTo(target);
+		}
+	}
+
+	private static void seekNeutral(MapLocation location)  throws GameActionException {
+		if(target == null || !target.equals(location) || rc.getRoundNum() % 50 == 0) {
+			Radio.broadcastMoveLocation(location, 35);
+			target = location;
+		}
+		if(rc.isCoreReady()) {
+			Nav.goTo(target);
+		}
+	}
+
+	private static void seekParts(MapLocation location)  throws GameActionException {
+		if(target == null || !target.equals(location) || rc.getRoundNum() % 50 == 0) {
+			Radio.broadcastMoveLocation(location, 35);
+			target = location;
+		}
+		if(rc.isCoreReady()) {
+			Nav.goTo(target);
+		}
+	}
 
 	private static int determineStrategy(int robotType) throws GameActionException {
 		// determines strategies for requesting robots
