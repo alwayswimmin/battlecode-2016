@@ -137,4 +137,29 @@ public class Util extends Bot {
 		return counter >= 2;
 		
 	}
+	public static boolean isEdge(MapLocation loc) throws GameActionException {
+		int counter = 0;
+		if(rc.canSense(loc.add(Direction.NORTH))) {
+			if(!rc.onTheMap(loc.add(Direction.NORTH))) {
+				counter++;
+			}
+		}
+		if(rc.canSense(loc.add(Direction.EAST))) {
+			if(!rc.onTheMap(loc.add(Direction.EAST))) {
+				counter++;
+			}
+		}
+		if(rc.canSense(loc.add(Direction.SOUTH))) {
+			if(!rc.onTheMap(loc.add(Direction.SOUTH))) {
+				counter++;
+			}
+		}
+		if(rc.canSense(loc.add(Direction.WEST))) {
+			if(!rc.onTheMap(loc.add(Direction.WEST))) {
+				counter++;
+			}
+		}
+		return counter >= 1;
+		
+	}
 }

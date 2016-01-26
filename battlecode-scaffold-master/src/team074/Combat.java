@@ -424,16 +424,20 @@ public class Combat extends Bot {
 
 	public static void action() throws GameActionException {
 		enemiesWithinSightRange = rc.senseHostileRobots(myLocation, SIGHT_RANGE);
+		RobotInfo[] alliesWithinSightRange = rc.senseNearbyRobots(SIGHT_RANGE, myTeam);
 		safetyPolicy = new SPCombat(enemiesWithinSightRange);
 
-		if(Util.likelyToBecomeZombie(INFO, enemiesWithinSightRange)) {
-			rc.setIndicatorString(1, "likelyToBecomeZombie");
-			if(rc.isCoreReady()) {
-				for(int i = enemiesWithinSightRange.length; --i >= 0; ) {
-					if(TYPE.cooldownDelay == 1 && enemiesWithinSightRange[i].team == enemyTeam) {
-						Nav.goTo(enemiesWithinSightRange[i].location);
-						if(!rc.isCoreReady()) {
-							break;
+		if(enemiesWithinSightRange.length >= 2 && alliesWithinSightRange.length >= 1) { 
+			// only suicide if onstensibly in combat
+			if(Util.likelyToBecomeZombie(INFO, enemiesWithinSightRange)) {
+				rc.setIndicatorString(1, "likelyToBecomeZombie");
+				if(rc.isCoreReady()) {
+					for(int i = enemiesWithinSightRange.length; --i >= 0; ) {
+						if(TYPE.cooldownDelay == 1 && enemiesWithinSightRange[i].team == enemyTeam) {
+							Nav.goTo(enemiesWithinSightRange[i].location);
+							if(!rc.isCoreReady()) {
+								break;
+							}
 						}
 					}
 				}
@@ -469,7 +473,6 @@ public class Combat extends Bot {
 
 		// move away from friends who might become zombies
 		if(rc.isCoreReady()) {
-			RobotInfo[] alliesWithinSightRange = rc.senseNearbyRobots(SIGHT_RANGE, myTeam);
 			for(int i = alliesWithinSightRange.length; --i >= 0; ) {
 				if(Util.likelyToBecomeZombie(alliesWithinSightRange[i], enemiesWithinSightRange)) {
 					Nav.goTo(myLocation.add(alliesWithinSightRange[i].location.directionTo(myLocation)));

@@ -213,7 +213,7 @@ public class Archon extends Bot {
 		}
 		boolean runAwayOverride = consecutiveTurnsOfEnemy % 20 > 15;
 		if(runAwayOverride) {
-			typeToBuild = 3;
+			typeToBuild = 1;
 			runAwayOverride = false;
 			for(int k = hostileWithinRange.length; --k >= 0; ) {
 				if(hostileWithinRange[k].type == RobotType.FASTZOMBIE) {
@@ -277,7 +277,8 @@ public class Archon extends Bot {
 			} else if(rc.isCoreReady()) {
 				// tries to move to neutrals and parts
 				if(neutralWithinRange.length > 0) {
-					Nav.goTo(neutralWithinRange[0].location, policy);
+					// Nav.goTo(neutralWithinRange[0].location, policy);
+					seekNeutral(neutralWithinRange[0].location);
 				}
 				if(rc.isCoreReady()) {
 					MapLocation[] partsLocations = rc.sensePartLocations(SIGHT_RANGE);
@@ -288,7 +289,8 @@ public class Archon extends Bot {
 								minindex = i;
 							}
 						}
-						Nav.goTo(partsLocations[minindex], policy);
+						// Nav.goTo(partsLocations[minindex], policy);
+						seekParts(partsLocations[minindex]);
 					}
 					/*
 					if(partsLocations.length > 0) {
@@ -502,7 +504,7 @@ public class Archon extends Bot {
 
 		int closestPartsIndex = -1;
 		int bestDistanceToParts = 1000000;
-		for(int i = numberOfParts; --i >= 0; ) {
+		for(int i = numberOfParts, j = 20; --i >= 0 && --j >= 0; ) {
 			if(partsVisited[i]) {
 				// these parts were already taken, don't go here again
 				continue;
@@ -516,7 +518,7 @@ public class Archon extends Bot {
 
 		int closestNeutralIndex = -1;
 		int bestDistanceToNeutral = 1000000;
-		for(int i = numberOfNeutrals; --i >= 0; ) {
+		for(int i = numberOfNeutrals, j = 20; --i >= 0 && --j >= 0; ) {
 			if(neutralVisited[i]) {
 				// this neutral were already activated, don't go here again
 				continue;
@@ -548,8 +550,8 @@ public class Archon extends Bot {
 			bestDistanceToEnemyArchon = 1000000;
 		}
 
-		// hard ignore everything else if round is high
-		if(rc.getRobotCount() > 100 || rc.getRoundNum() > 2250) {
+		// hard ignore everything else if we should attack
+		if(rc.getRobotCount() > 100 || rc.getRobotCount() > 40 && rc.getRoundNum() > 2000) {
 			closestDenIndex = -1;
 			closestNeutralIndex = -1;
 			closestPartsIndex = -1;
@@ -646,7 +648,7 @@ public class Archon extends Bot {
 
 	private static void seekNeutral(MapLocation location)  throws GameActionException {
 		if(target == null || !target.equals(location) || rc.getRoundNum() % 50 == 0) {
-			Radio.broadcastMoveLocation(location, 35);
+			Radio.broadcastMoveLocation(new MapLocation((6 * location.x - 1 * myLocation.x) / 5, (6 * location.y - 1 * myLocation.y) / 5), 35);
 			target = location;
 		}
 		if(rc.isCoreReady()) {
@@ -656,7 +658,7 @@ public class Archon extends Bot {
 
 	private static void seekParts(MapLocation location)  throws GameActionException {
 		if(target == null || !target.equals(location) || rc.getRoundNum() % 50 == 0) {
-			Radio.broadcastMoveLocation(location, 35);
+			Radio.broadcastMoveLocation(new MapLocation((6 * location.x - 1 * myLocation.x) / 5, (6 * location.y - 1 * myLocation.y) / 5), 35);
 			target = location;
 		}
 		if(rc.isCoreReady()) {
@@ -672,7 +674,7 @@ public class Archon extends Bot {
 				return 1;
 				// return 1 - (unitsOfTypeBuilt[robotType] % 3) % 2; // 0 defend, 1 attack
 			case 2:
-				// return strategy; // 0 turret defense, 1 roam
+				// return strategy; // 0 turret defense, 1 roam, 2 offensive turret
 				return rc.getRoundNum() >= 300 ? Math.random() > 0.6 ? 1 : 2 : 1;
 			case 3:
 				// return 1;
