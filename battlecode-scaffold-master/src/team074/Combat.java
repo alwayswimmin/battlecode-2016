@@ -179,7 +179,7 @@ public class Combat extends Bot {
 	}
 
 	public static boolean retreat(RobotInfo[] enemiesWithinSightRange) throws GameActionException {
-		// rc.setIndicatorString(0, "trying to retreat");
+		rc.setIndicatorString(0, "trying to retreat");
 		Direction bestRetreatDir = null;
 		RobotInfo currentClosestEnemy = Util.closest(enemiesWithinSightRange, myLocation);
 
@@ -225,6 +225,7 @@ public class Combat extends Bot {
 				if(canWin1v1(enemy)) {
 					// can win by self
 					attackIfReady(enemy.location);
+					rc.setIndicatorString(0, "can win the 1v1 on turn " + rc.getRoundNum());
 					return;
 				}
 				// can't win by self
@@ -232,6 +233,7 @@ public class Combat extends Bot {
 				if(alliesIAP[0] != null) {
 					// i have friends, keep fighting
 					attackIfReady(enemy.location);
+					rc.setIndicatorString(0, "has enough friends on turn " + rc.getRoundNum());
 					return;
 				}
 				// no friends, also can't win by self
@@ -239,6 +241,7 @@ public class Combat extends Bot {
 						&& rc.getWeaponDelay() <= enemy.weaponDelay - 1) {
 					// we can shoot and leave before taking damage
 					attackIfReady(enemy.location);
+					rc.setIndicatorString(0, "can shoot and bounce " + rc.getRoundNum());
 					return;
 				}
 				// we can't shoot without taking damage
@@ -352,6 +355,7 @@ public class Combat extends Bot {
 	}
 	private static boolean tryToInitiate1v1(MapLocation loc, RobotInfo[] enemiesWithinSightRange)
 		throws GameActionException {
+			rc.setIndicatorString(1, "initiate 1v1");
 			Direction dir = myLocation.directionTo(loc).rotateLeft();
 			for(int i = 3; --i >= 0; ) {
 				if(!rc.canMove(dir)) continue;
@@ -373,6 +377,7 @@ public class Combat extends Bot {
 
 	private static boolean tryToInitiateTeamFight(MapLocation loc, int numberOfAllies, RobotInfo[] enemiesWithinSightRange)
 		throws GameActionException {
+			rc.setIndicatorString(1, "initiate fight");
 			Direction dir = myLocation.directionTo(loc).rotateLeft();
 			for(int i = 3; --i >= 0; ) {
 				if(!rc.canMove(dir)) continue;
@@ -392,6 +397,7 @@ public class Combat extends Bot {
 			return false;
 		}
 	private static boolean tryToFightNonattackingRobot(RobotInfo[] enemiesWithinSightRange) throws GameActionException {
+		rc.setIndicatorString(1, "CHASE");
 		for(int i = enemiesWithinSightRange.length; --i >= 0; ) {
 			RobotInfo enemy = enemiesWithinSightRange[i];
 			if(Util.isNotAttacker(enemy.type)) {
@@ -405,49 +411,34 @@ public class Combat extends Bot {
 	}
 
 	private static void attackIfReady(MapLocation loc) throws GameActionException {
+		rc.setIndicatorString(1, "ATTACK");
 		// if ready, attack
 		if (rc.isWeaponReady()) {
 			rc.attackLocation(loc);
 		}
-		// not ready; if possible, kite shorter range units
-		if(rc.isCoreReady()) {
-			for(int i = enemiesWithinSightRange.length; --i >= 0; ) {
-				if(TYPE.cooldownDelay == 1 && enemiesWithinSightRange[i].attackPower > 0 && enemiesWithinSightRange[i].type.attackRadiusSquared <= ATTACK_RANGE) {
-					Nav.goTo(myLocation.add(enemiesWithinSightRange[i].location.directionTo(myLocation)));
-					if(!rc.isCoreReady()) {
-						break;
-					}
-				}
-			}
-		}
-
-		// move closer to zombie dens, archons for maximum damage output, turret for minimum damage received
-		if(rc.isCoreReady()) {
-			for(int i = enemiesWithinSightRange.length; --i >= 0; ) {
-				if(enemiesWithinSightRange[i].type == RobotType.ZOMBIEDEN || enemiesWithinSightRange[i].type == RobotType.ARCHON
-						|| enemiesWithinSightRange[i].type == RobotType.TTM || enemiesWithinSightRange[i].type == RobotType.TURRET) {
-					Nav.goTo(myLocation.add(enemiesWithinSightRange[i].location.directionTo(myLocation)), safetyPolicy);
-					if(!rc.isCoreReady()) {
-						break;
-					}
-				}
-			}
-		}
-
 	}
 
 	private static RobotInfo[] enemiesWithinSightRange;
-	static boolean firstTurn = true;
 	private static int turnsSinceLastAttack = 100;
 	static MapLocation target = null;
 
 	public static void action() throws GameActionException {
-		if (firstTurn) {
-			firstTurn = false;
-		}
-
 		enemiesWithinSightRange = rc.senseHostileRobots(myLocation, SIGHT_RANGE);
 		safetyPolicy = new SPCombat(enemiesWithinSightRange);
+
+		if(Util.likelyToBecomeZombie(INFO, enemiesWithinSightRange)) {
+			rc.setIndicatorString(1, "likelyToBecomeZombie");
+			if(rc.isCoreReady()) {
+				for(int i = enemiesWithinSightRange.length; --i >= 0; ) {
+					if(TYPE.cooldownDelay == 1 && enemiesWithinSightRange[i].team == enemyTeam) {
+						Nav.goTo(enemiesWithinSightRange[i].location);
+						if(!rc.isCoreReady()) {
+							break;
+						}
+					}
+				}
+			}
+		}
 
 		if(enemiesWithinSightRange.length > 0) {
 			fight(enemiesWithinSightRange);
@@ -463,6 +454,46 @@ public class Combat extends Bot {
 
 			}
 		}
+
+		// not ready; if possible, kite shorter range units
+		if(rc.isCoreReady()) {
+			for(int i = enemiesWithinSightRange.length; --i >= 0; ) {
+				if(TYPE.cooldownDelay == 1 && enemiesWithinSightRange[i].attackPower > 0 && enemiesWithinSightRange[i].type.attackRadiusSquared <= ATTACK_RANGE) {
+					Nav.goTo(myLocation.add(enemiesWithinSightRange[i].location.directionTo(myLocation)));
+					if(!rc.isCoreReady()) {
+						break;
+					}
+				}
+			}
+		}
+
+		// move away from friends who might become zombies
+		if(rc.isCoreReady()) {
+			RobotInfo[] alliesWithinSightRange = rc.senseNearbyRobots(SIGHT_RANGE, myTeam);
+			for(int i = alliesWithinSightRange.length; --i >= 0; ) {
+				if(Util.likelyToBecomeZombie(alliesWithinSightRange[i], enemiesWithinSightRange)) {
+					Nav.goTo(myLocation.add(alliesWithinSightRange[i].location.directionTo(myLocation)));
+					if(!rc.isCoreReady()) {
+						break;
+					}
+				}
+			}
+		}
+
+
+		// move closer to zombie dens, archons for maximum damage output, turret for minimum damage received
+		if(rc.isCoreReady()) {
+			for(int i = enemiesWithinSightRange.length; --i >= 0; ) {
+				if(enemiesWithinSightRange[i].type == RobotType.ZOMBIEDEN || enemiesWithinSightRange[i].type == RobotType.ARCHON
+						|| enemiesWithinSightRange[i].type == RobotType.TTM || enemiesWithinSightRange[i].type == RobotType.TURRET) {
+					Nav.goTo(myLocation.add(enemiesWithinSightRange[i].location.directionTo(myLocation)), safetyPolicy);
+					if(!rc.isCoreReady()) {
+						break;
+					}
+				}
+			}
+		}
+
 
 		if(turnsSinceLastAttack >= 4 && rc.isCoreReady() /*&& (rc.getRoundNum() - ID) % 7 == 0*/) {
 			// System.out.println("trying to move randomly");

@@ -21,7 +21,7 @@ class SPFollow implements SafetyPolicy {
 				return true;
 			}
 		}
-		return Util.isCorner(loc);
+		return Util.isEdge(loc);
 	}
 }
 
