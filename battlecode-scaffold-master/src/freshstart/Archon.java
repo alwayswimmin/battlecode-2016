@@ -104,7 +104,20 @@ public class Archon extends Bot {
 		}
 	}
 
+	private static MapLocation enemyTurtle = null;
+
 	private static void action() throws GameActionException {
+		IdAndMapLocation newEnemyTurtle = Radio.getTurtleLocation();
+		if(newEnemyTurtle != null) {
+			enemyTurtle = newEnemyTurtle.location;
+		}
+
+		if(enemyTurtle != null) {
+			// anti turtle strategy
+			antiTurtleStrategy();
+			return;
+		}
+
 
 		// moved pretty far from my initial position; tell units to come to new location rather than report to old
 		myLocation = rc.getLocation();
@@ -112,6 +125,7 @@ public class Archon extends Bot {
 			personalHQ = myLocation;
 			Radio.broadcastMoveCampLocation(myLocation, 1000);
 		}
+
 		updateVisited();
 		policy = new SPFollow(myLocation, rc.senseNearbyRobots(SIGHT_RANGE, myTeam));
 
@@ -346,6 +360,244 @@ public class Archon extends Bot {
 		}
 	}
 
+	private static void antiTurtleStrategy() throws GameActionException {
+		// moved pretty far from my initial position; tell units to come to new location rather than report to old
+		myLocation = rc.getLocation();
+		if(myLocation.distanceSquaredTo(personalHQ) > 35) {
+			personalHQ = myLocation;
+			Radio.broadcastMoveCampLocation(myLocation, 1000);
+		}
+
+		updateVisited();
+		policy = new SPFollow(myLocation, rc.senseNearbyRobots(SIGHT_RANGE, myTeam));
+
+		// make forced moves if forced move counter is non-zero
+		// implemented by yang for running away from corners
+		if(forcedMoveCounter > 0 && rc.isCoreReady()) {
+			forcedMoveCounter--;
+			if(rc.canMove(forcedMoveDir)) {
+				rc.move(forcedMoveDir);
+				return;
+			} else if(rc.canMove(forcedMoveDir.rotateLeft())) {
+				rc.move(forcedMoveDir.rotateLeft());
+				return;
+			} else if(rc.canMove(forcedMoveDir.rotateRight())) {
+				rc.move(forcedMoveDir.rotateRight());
+				return;
+			} else {
+				forcedMoveCounter = 0;
+			}
+		}
+
+		RobotInfo[] hostileWithinRange = rc.senseHostileRobots(myLocation, SIGHT_RANGE);
+		RobotInfo[] neutralWithinRange = rc.senseNearbyRobots(SIGHT_RANGE, Team.NEUTRAL);
+		RobotInfo[] friendWithinRange = rc.senseNearbyRobots(SIGHT_RANGE, myTeam);
+
+		// processes friends and tries to heal them
+		// TODO: some metric for best friend to heal
+		for(int i = 0; i < friendWithinRange.length; ++i) {
+			if(friendWithinRange[i].health != friendWithinRange[i].maxHealth && 
+					(ATTACK_RANGE > distanceBetween(rc.getLocation(), friendWithinRange[i].location)) 
+					&& (friendWithinRange[i].type != RobotType.ARCHON)) {
+				rc.repair(friendWithinRange[i].location);
+				break;
+			}
+		}
+
+		int enemyCentroidX = 0, enemyCentroidY = 0;
+		MapLocation enemyCentroid = null;
+
+		if(hostileWithinRange.length != 0) {
+			// if enemies in range, call friends to defend
+			// TODO: change to run in direction that maximizes distance, to prevent getting trapped against walls
+			if(turnsSinceEnemySeen > 5) { // waits at least 5 turns between broadcasts
+				Radio.broadcastDefendLocation(myLocation, 1000);
+			}
+			turnsSinceEnemySeen = 0;
+			consecutiveTurnsOfEnemy++;
+			int enemyCount = 0;
+			// finds centroid of visible enemies
+			for(int i = hostileWithinRange.length; --i >= 0; ) {
+				if(hostileWithinRange[i].attackPower > 0) {
+					enemyCentroidX += hostileWithinRange[i].location.x;
+					enemyCentroidY += hostileWithinRange[i].location.y;
+					enemyCount++;
+				}
+			}
+			if(enemyCount != 0)
+			enemyCentroid = new MapLocation(enemyCentroidX / enemyCount, enemyCentroidY / enemyCount);
+			rc.setIndicatorString(0, "enemy at " + enemyCentroid.x + ", " + enemyCentroid.y);
+		} else {
+			// no enemies seen
+			turnsSinceEnemySeen++;
+			consecutiveTurnsOfEnemy = 0;
+			if(turnsSinceEnemySeen == 15) {
+				Radio.broadcastClearDefend(1000);
+				// stop defending 
+			}
+		}
+
+		// process if a neutral around us can be activated
+		int canActivate = -1;
+		for(int i = 0; i < neutralWithinRange.length; ++i) {
+			if(distanceBetween(rc.getLocation(), neutralWithinRange[i].location) < 3) {
+				canActivate = i;
+			}
+		}
+
+		int typeToBuild;
+		boolean addedRobot;
+
+		// get information from scouts, give strategy assignments
+		processSignals();
+
+		if((unitsOfTypeBuilt[2] < 1 || Math.random() > 0.75)) {
+			typeToBuild = 2;
+		} else if(Math.random() > 0.95) {
+			typeToBuild = 5;
+			// typeToBuild = 3; // actually don't build vipers for now
+		} else {
+			typeToBuild = 3;
+		}
+
+		boolean runAwayOverride = consecutiveTurnsOfEnemy % 20 > 15;
+		if(runAwayOverride) {
+			typeToBuild = 1;
+			runAwayOverride = false;
+			for(int k = hostileWithinRange.length; --k >= 0; ) {
+				if(hostileWithinRange[k].type == RobotType.FASTZOMBIE) {
+					// not going to outrun, try to fight off the zombie, or at the very least slow it down
+					runAwayOverride = true;
+					break;
+				}
+			}
+		}
+		addedRobot = false;
+		if(rc.isCoreReady()) {
+			// activates neutrals if possible
+			if(canActivate > -1) {
+				rc.activate(neutralWithinRange[canActivate].location);
+				switch(neutralWithinRange[canActivate].type) {
+					case ARCHON:
+						typeToBuild = 0;
+						break;
+					case GUARD:
+						typeToBuild = 1;
+						break;
+					case SCOUT:
+						typeToBuild = 2;
+						break;
+					case SOLDIER:
+						typeToBuild = 3;
+						break;
+					case TURRET:
+					case TTM:
+						typeToBuild = 4;
+						break;
+					case VIPER:
+						typeToBuild = 5;
+						break;
+					default:
+						break;
+				}
+				unitsOfTypeBuilt[typeToBuild]++;
+				addedRobot = true;
+			} else if(!runAwayOverride && enemyCentroid != null) {
+				// if enemies are around, runs away from enemies
+				// TODO: replace with new enemy avoidance strategy
+				Direction dirToTry = Direction.EAST;
+				Direction bestDir = null;
+				/*
+				for(int i = 8; --i >= 0; ) {
+					if(rc.canMove(dirToTry)) {
+						if(bestDir == null && myLocation.distanceSquaredTo(enemyCentroid) >= myLocation.add(dirToTry).distanceSquaredTo(enemyCentroid) || myLocation.add(bestDir).distanceSquaredTo(enemyCentroid) > myLocation.add(dirToTry).distanceSquaredTo(enemyCentroid)) {
+							bestDir = dirToTry;
+						}
+					}
+					dirToTry = dirToTry.rotateRight();
+				}
+				*/
+				if(bestDir != null) {
+					rc.move(dirToTry);
+				} else {
+					int dx = myLocation.x - enemyCentroid.x;
+					int dy = myLocation.y - enemyCentroid.y;
+					MapLocation dest = new MapLocation(myLocation.x + 3 * dx, myLocation.y + 3 * dy);
+					Combat.retreat(hostileWithinRange);
+					if(rc.isCoreReady()) {
+						Nav.goTo(dest);
+					}
+				}
+			} else if(typeToBuild != -1 && rc.hasBuildRequirements(robotTypes[typeToBuild]) && (rc.getRoundNum() < 550 || rc.getTeamParts() > 130)) {
+				// tries to build new robots
+				Direction dirToBuild = Direction.EAST;
+				for(int i = 0; i < 8; i++) {
+					if(rc.canBuild(dirToBuild, robotTypes[typeToBuild])) {
+						rc.build(dirToBuild, robotTypes[typeToBuild]);
+						unitsOfTypeBuilt[typeToBuild]++;
+						addedRobot = true;
+						break;
+					} else {
+						dirToBuild = dirToBuild.rotateLeft();
+					}
+				}
+			} else if(rc.isCoreReady()) {
+				// tries to move to neutrals and parts
+				if(neutralWithinRange.length > 0) {
+					// Nav.goTo(neutralWithinRange[0].location, policy);
+					seekNeutral(neutralWithinRange[0].location);
+				}
+				if(rc.isCoreReady()) {
+					MapLocation[] partsLocations = rc.sensePartLocations(SIGHT_RANGE);
+					if(partsLocations.length > 0) {
+						int minindex = 0;
+						for(int i = partsLocations.length; --i > 0; ) {
+							if(partsLocations[i].distanceSquaredTo(myLocation) < partsLocations[minindex].distanceSquaredTo(myLocation)) {
+								minindex = i;
+							}
+						}
+						// Nav.goTo(partsLocations[minindex], policy);
+						seekParts(partsLocations[minindex]);
+					}
+					/*
+					if(partsLocations.length > 0) {
+						int maxindex = 0;
+						for(int i = partsLocations.length; --i > 0; ) {
+							if(rc.senseParts(partsLocations[i]) > rc.senseParts(partsLocations[maxindex])) {
+								maxindex = i;
+							}
+						}
+						Nav.goTo(partsLocations[maxindex], policy);
+					}
+					*/
+				}
+			}
+		}
+		// idle, so move somewhere strategic
+		// moveSomewhere();
+					int dx = myLocation.x - enemyTurtle.x;
+					int dy = myLocation.y - enemyTurtle.y;
+					MapLocation dest = new MapLocation(myLocation.x + 3 * dx, myLocation.y + 3 * dy);
+					if(rc.isCoreReady()) {
+						Nav.goTo(dest);
+					}
+		// moves randomly
+		if(rc.isCoreReady()) {
+			int rot = (int)(Math.random() * 8);
+			Direction dirToMove = Direction.EAST;
+			for(int i = 0; i < rot; ++i){
+				dirToMove = dirToMove.rotateLeft();
+			}
+			for(int i = 0; i < 8; ++i) {
+				if(rc.canMove(dirToMove)) {
+					Nav.goTo(myLocation.add(dirToMove), policy);
+					break;
+				}
+				dirToMove = dirToMove.rotateLeft();
+			}
+		}
+	}
+	
 	private static void processSignals() throws GameActionException {
 		// processes radio signals:
 		//     receives strategy requests and assigns strategies

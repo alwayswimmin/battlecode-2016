@@ -18,6 +18,7 @@ import java.util.*;
 // 9: turret attack order
 // 10: enemy archon encountered
 // 11: clear all orders, start fresh
+// 12: enemy turle detected
 // ...
 // 30: unit-specific strategy assignment
 // 31: unit-specific move order
@@ -209,6 +210,14 @@ public class Radio extends Bot {
 
 	public static IdAndMapLocation getMoveCampLocation() throws GameActionException {
 		return getLocation(5);
+	}
+
+	public static void broadcastTurtleLocation(MapLocation dest, int radius) throws GameActionException {
+		broadcastLocation(12, dest, radius);
+	}
+
+	public static IdAndMapLocation getTurtleLocation() throws GameActionException {
+		return getLocation(12);
 	}
 
 	public static void broadcastDefendLocation(MapLocation dest, int radius) throws GameActionException {
