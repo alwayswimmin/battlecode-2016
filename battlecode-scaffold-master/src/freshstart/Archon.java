@@ -253,14 +253,32 @@ public class Archon extends Bot {
 				}
 				unitsOfTypeBuilt[typeToBuild]++;
 				addedRobot = true;
-			} else if(!runAwayOverride && enemyCentroid != null && !enemyCentroid.equals(myLocation)) {
+			} else if(!runAwayOverride && enemyCentroid != null) {
 				// if enemies are around, runs away from enemies
 				// TODO: replace with new enemy avoidance strategy
-				int dx = myLocation.x - enemyCentroid.x;
-				int dy = myLocation.y - enemyCentroid.y;
-				MapLocation dest = new MapLocation(myLocation.x + 3 * dx, myLocation.y + 3 * dy);
-				Nav.goTo(dest);
-				// Combat.retreat(hostileWithinRange);
+				Direction dirToTry = Direction.EAST;
+				Direction bestDir = null;
+				/*
+				for(int i = 8; --i >= 0; ) {
+					if(rc.canMove(dirToTry)) {
+						if(bestDir == null && myLocation.distanceSquaredTo(enemyCentroid) >= myLocation.add(dirToTry).distanceSquaredTo(enemyCentroid) || myLocation.add(bestDir).distanceSquaredTo(enemyCentroid) > myLocation.add(dirToTry).distanceSquaredTo(enemyCentroid)) {
+							bestDir = dirToTry;
+						}
+					}
+					dirToTry = dirToTry.rotateRight();
+				}
+				*/
+				if(bestDir != null) {
+					rc.move(dirToTry);
+				} else {
+					int dx = myLocation.x - enemyCentroid.x;
+					int dy = myLocation.y - enemyCentroid.y;
+					MapLocation dest = new MapLocation(myLocation.x + 3 * dx, myLocation.y + 3 * dy);
+					Combat.retreat(hostileWithinRange);
+					if(rc.isCoreReady()) {
+						Nav.goTo(dest);
+					}
+				}
 			} else if(typeToBuild != -1 && rc.hasBuildRequirements(robotTypes[typeToBuild]) && (rc.getRoundNum() < 550 || rc.getTeamParts() > 130)) {
 				// tries to build new robots
 				Direction dirToBuild = Direction.EAST;
