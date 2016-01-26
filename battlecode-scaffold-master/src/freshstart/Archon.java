@@ -544,14 +544,24 @@ public class Archon extends Bot {
 			}
 		}
 
-		// hard ignore enemies if round is premature
-		if(rc.getRoundNum() < 500) {
+		// hard go to dens early game; losing 200 parts to enemy team is disasterous
+		if(closestDenIndex != -1 && rc.getRoundNum() < 500) {
+			closestEnemyArchonIndex = -1;
+			closestNeutralIndex = -1;
+			closestPartsIndex = -1;
+			bestDistanceToEnemyArchon = 1000000;
+			bestDistanceToNeutral = 1000000;
+			bestDistanceToParts = 1000000;
+		}
+
+		// hard ignore enemies if we are weak
+		if(rc.getRobotCount() < 25) {
 			closestEnemyArchonIndex = -1;
 			bestDistanceToEnemyArchon = 1000000;
 		}
 
 		// hard ignore everything else if we should attack
-		if(rc.getRobotCount() > 100 || rc.getRobotCount() > 40 && rc.getRoundNum() > 2000) {
+		if(closestEnemyArchonIndex != -1 && (rc.getRobotCount() > 100 || rc.getRobotCount() > 40 && rc.getRoundNum() > 2500)) {
 			closestDenIndex = -1;
 			closestNeutralIndex = -1;
 			closestPartsIndex = -1;
@@ -648,7 +658,7 @@ public class Archon extends Bot {
 
 	private static void seekNeutral(MapLocation location)  throws GameActionException {
 		if(target == null || !target.equals(location) || rc.getRoundNum() % 50 == 0) {
-			Radio.broadcastMoveLocation(new MapLocation((6 * location.x - 1 * myLocation.x) / 5, (6 * location.y - 1 * myLocation.y) / 5), 35);
+			Radio.broadcastMoveLocation(new MapLocation((5 * location.x - 0 * myLocation.x) / 5, (5 * location.y - 0 * myLocation.y) / 5), 35);
 			target = location;
 		}
 		if(rc.isCoreReady()) {
@@ -658,7 +668,7 @@ public class Archon extends Bot {
 
 	private static void seekParts(MapLocation location)  throws GameActionException {
 		if(target == null || !target.equals(location) || rc.getRoundNum() % 50 == 0) {
-			Radio.broadcastMoveLocation(new MapLocation((6 * location.x - 1 * myLocation.x) / 5, (6 * location.y - 1 * myLocation.y) / 5), 35);
+			Radio.broadcastMoveLocation(new MapLocation((5 * location.x - 0 * myLocation.x) / 5, (5 * location.y - 0 * myLocation.y) / 5), 35);
 			target = location;
 		}
 		if(rc.isCoreReady()) {

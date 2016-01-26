@@ -144,6 +144,12 @@ public class Turret extends Bot {
 				//	Nav.goTo(goal);
 				//}
 			}else{
+		if(target != null && myLocation.distanceSquaredTo(Combat.target) < SIGHT_RANGE) {
+			RobotInfo robotAtTarget = rc.senseRobotAtLocation(target);
+			if(rc.senseParts(target) < 1 && (robotAtTarget == null || robotAtTarget.team == Team.NEUTRAL || robotAtTarget.team == myTeam)) {
+				setTarget(personalHQ); // nothing to see here, go home
+			}
+		}
 				if(target != null) {
 					Nav.goTo(target);
 				}

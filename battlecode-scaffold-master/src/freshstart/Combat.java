@@ -126,6 +126,10 @@ public class Combat extends Bot {
 		}
 		RobotInfo closestRobot = null;
 		for(int i = enemiesWithinSightRange.length; --i >= 0; ) {
+			if(target.location.equals(enemiesWithinSightRange[i].location)) {
+				// this is that robot
+				continue;
+			}
 			if(enemiesWithinSightRange[i].team == enemyTeam && closestRobot == null || enemiesWithinSightRange[i].location.distanceSquaredTo(target.location) < closestRobot.location.distanceSquaredTo(target.location)) {
 				closestRobot = enemiesWithinSightRange[i];
 			}
@@ -139,6 +143,10 @@ public class Combat extends Bot {
 			return true;
 		}
 		if(closestRobot.team == enemyTeam) {
+			return true;
+		}
+		if(closestRobot.team == Team.ZOMBIE) {
+			// it's going to become a zombie even if we don't attack it
 			return true;
 		}
 		return false;
@@ -531,14 +539,29 @@ public class Combat extends Bot {
 		RobotInfo[] alliesWithinSightRange = rc.senseNearbyRobots(SIGHT_RANGE, myTeam);
 		safetyPolicy = new SPCombat(enemiesWithinSightRange);
 
+		SafetyPolicy spshort = new SPShortZombie(enemiesWithinSightRange);
 		if(otherTeamWithinSightRange.length >= 2 && alliesWithinSightRange.length >= 3) { 
 			// only suicide if onstensibly in combat
 			if(Util.likelyToBecomeZombie(INFO, enemiesWithinSightRange)) {
 				rc.setIndicatorString(1, "likelyToBecomeZombie");
 				if(rc.isCoreReady()) {
 					for(int i = otherTeamWithinSightRange.length; --i >= 0; ) {
-						if(TYPE.cooldownDelay == 1) {
+						if(TYPE.cooldownDelay <= 1.01) {
 							Nav.goTo(otherTeamWithinSightRange[i].location, new SPShortZombie(enemiesWithinSightRange));
+							Direction newDir = myLocation.directionTo(otherTeamWithinSightRange[i].location);
+							if(rc.canMove(newDir) && spshort.safe(otherTeamWithinSightRange[i].location)) {
+								rc.move(newDir);
+							}
+							if(!rc.isCoreReady()) {
+								break;
+							}
+						}
+					}
+				}
+				if(rc.isCoreReady()) {
+					for(int i = otherTeamWithinSightRange.length; --i >= 0; ) {
+						if(TYPE.cooldownDelay <= 1.01) {
+							Nav.goTo(otherTeamWithinSightRange[i].location, spshort);
 							if(!rc.isCoreReady()) {
 								break;
 							}
@@ -568,6 +591,21 @@ public class Combat extends Bot {
 			for(int i = enemiesWithinSightRange.length; --i >= 0; ) {
 				if(TYPE.cooldownDelay <= 1.001 && enemiesWithinSightRange[i].attackPower > 0 && enemiesWithinSightRange[i].type.attackRadiusSquared <= ATTACK_RANGE) {
 					rc.setIndicatorString(1, "trying to kite");
+					Direction newDir = enemiesWithinSightRange[i].location.directionTo(myLocation);
+					MapLocation newLoc = myLocation.add(newDir);
+					if(rc.canMove(newDir) && spshort.safe(newLoc)) {
+						rc.move(newDir);
+					}
+					if(!rc.isCoreReady()) {
+						break;
+					}
+				}
+			}
+		}
+		if(rc.isCoreReady()) {
+			for(int i = enemiesWithinSightRange.length; --i >= 0; ) {
+				if(TYPE.cooldownDelay <= 1.001 && enemiesWithinSightRange[i].attackPower > 0 && enemiesWithinSightRange[i].type.attackRadiusSquared <= ATTACK_RANGE) {
+					rc.setIndicatorString(1, "trying to kite");
 					Nav.goTo(myLocation.add(enemiesWithinSightRange[i].location.directionTo(myLocation)));
 					if(!rc.isCoreReady()) {
 						break;
@@ -580,6 +618,20 @@ public class Combat extends Bot {
 		if(rc.isCoreReady()) {
 			for(int i = alliesWithinSightRange.length; --i >= 0; ) {
 				if(Util.likelyToBecomeZombie(alliesWithinSightRange[i], enemiesWithinSightRange)) {
+					Direction newDir = alliesWithinSightRange[i].location.directionTo(myLocation);
+					MapLocation newLoc = myLocation.add(newDir);
+					if(rc.canMove(newDir) && spshort.safe(newLoc)) {
+						rc.move(newDir);
+					}
+					if(!rc.isCoreReady()) {
+						break;
+					}
+				}
+			}
+		}
+		if(rc.isCoreReady()) {
+			for(int i = alliesWithinSightRange.length; --i >= 0; ) {
+				if(Util.likelyToBecomeZombie(alliesWithinSightRange[i], enemiesWithinSightRange)) {
 					Nav.goTo(myLocation.add(alliesWithinSightRange[i].location.directionTo(myLocation)));
 					if(!rc.isCoreReady()) {
 						break;
@@ -587,7 +639,6 @@ public class Combat extends Bot {
 				}
 			}
 		}
-
 
 		// move closer to zombie dens, archons for maximum damage output, turret for minimum damage received
 		if(rc.isCoreReady()) {

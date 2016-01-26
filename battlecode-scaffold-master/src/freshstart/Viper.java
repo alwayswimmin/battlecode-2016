@@ -49,7 +49,7 @@ public class Viper extends Bot {
 		sanityCheck();
 		if(Combat.target != null && myLocation.distanceSquaredTo(Combat.target) < SIGHT_RANGE) {
 			RobotInfo robotAtTarget = rc.senseRobotAtLocation(Combat.target);
-			if(robotAtTarget == null || robotAtTarget.team == Team.NEUTRAL || robotAtTarget.team == myTeam) {
+			if(rc.senseParts(Combat.target) < 1 && (robotAtTarget == null || robotAtTarget.team == Team.NEUTRAL || robotAtTarget.team == myTeam)) {
 				setTarget(personalHQ); // nothing to see here, go home
 			}
 		}
