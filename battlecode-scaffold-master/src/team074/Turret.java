@@ -11,35 +11,47 @@ public class Turret extends Bot {
 		Bot.init(_rc);
 		init();
 		while(true) {
-			myLocation = rc.getLocation();
-			updateHealth();
-			Radio.process();
-			action();
-			Radio.clear();
+			try {
+				action();
+			} catch(Exception e) {
+				
+			}
 			Clock.yield();
 		}
 	}
+
+	private static int archonCommanderID = -1;
+	private static int lastTurnIHeardFromCommander = -1;
+
 	private static void init() throws GameActionException {
-		// things that run for the first time
-		personalHQ = rc.getLocation();
-		defendQueue = new MyQueue<Integer>();
-		moveQueue = new MyQueue<MapLocation>();
-		rnd = new Random(rc.getID());
-		Radio.broadcastInitialStrategyRequest(10);
+		// initializes soldier
+		personalHQ = myLocation;
+		RobotInfo[] initialFriends = rc.senseNearbyRobots(SIGHT_RANGE, myTeam);
+		RobotInfo closestArchon = null;
+		for(int i = initialFriends.length; --i >= 0; ) {
+			if(initialFriends[i].type == RobotType.ARCHON) {
+				if(closestArchon == null || initialFriends[i].location.distanceSquaredTo(myLocation) < closestArchon.location.distanceSquaredTo(myLocation)) {
+					closestArchon = initialFriends[i];
+				}
+			}
+		}
+		if(closestArchon != null) {
+			archonCommanderID = closestArchon.ID;
+			personalHQ = closestArchon.location;
+		}
+		lastTurnIHeardFromCommander = rc.getRoundNum();
 	}
+
 	private static int turnsSinceEnemySeen = 0;
+
 	private static void action() throws GameActionException {
+		updateHealth();
+		update();
+		Radio.process();
+		myLocation = rc.getLocation();
 		processSignals();
-		switch(strategy) {                                                       
-                        case -1:                                                         
-                                int channel = Radio.getTuneCommand();                    
-                                if(channel == 30) {                                      
-                                        strategy = Radio.getStrategyAssignment();        
-                                }      
-                                break;
-                        default:                                                         
-                                break;
-                }
+		
+		sanityCheck();
 		if(rc.getType() == RobotType.TURRET) {
 			//RobotInfo[] visibleEnemyArray = rc.senseHostileRobots(rc.getLocation(), 1000000);
 			
@@ -101,9 +113,7 @@ public class Turret extends Bot {
 //					RobotInfo[] nearbyFriends = rc.senseNearbyRobots(2, rc.getTeam());
 //					if(nearbyFriends.length>3){
 //						Direction away = randomDirection();
-						if(strategy == 1) {
-							rc.pack();
-						}
+						rc.pack();
 //					}
 				}
 				turnsSinceEnemySeen++;
@@ -134,70 +144,80 @@ public class Turret extends Bot {
 				//	Nav.goTo(goal);
 				//}
 			}else{
-//				if(strategy == 1) {
-					moveSomewhere();
-//				}
+		if(target != null && myLocation.distanceSquaredTo(Combat.target) < SIGHT_RANGE) {
+			RobotInfo robotAtTarget = rc.senseRobotAtLocation(target);
+			if(rc.senseParts(target) < 1 && (robotAtTarget == null || robotAtTarget.team == Team.NEUTRAL || robotAtTarget.team == myTeam)) {
+				setTarget(personalHQ); // nothing to see here, go home
 			}
-
+		}
+				if(target != null) {
+					Nav.goTo(target);
+				}
+			}
 		}
 	}
-	private static Direction randomDirection() {
-		return Direction.values()[(int)(rnd.nextDouble()*8)];
-	}
-	private static MyQueue<Integer> defendQueue;
-	private static MyQueue<MapLocation> moveQueue;
-	private static MapLocation[] teamLocations = new MapLocation[32001];
-	private static int[] teamMemberNeedsHelp = new int[32001]; // store what turn request was made
-
 	private static void processSignals() throws GameActionException {
-		IdAndMapLocation newDefend = null, newMove = null; int clearDefend = -1;
-		newDefend = Radio.getDefendLocation(); newMove = Radio.getMoveLocation(); clearDefend = Radio.getClearDefend();
-        IdAndMapLocation newHQ = Radio.getMoveCampLocation();                            
-        if(newHQ != null) {
-            personalHQ = newHQ.location;
-        }           
-		while(newDefend != null) {
-			if(teamMemberNeedsHelp[newDefend.id] == 0) {
-				defendQueue.add(newDefend.id);
+		IdAndMapLocation newDefend = null, newMove = null; int clearDefend = -1; int clearOrders = -1;
+		newDefend = Radio.getDefendLocation(); newMove = Radio.getMoveLocation(); clearDefend = Radio.getClearDefend(); clearOrders = Radio.getClear();
+		IdAndMapLocation newHQ = Radio.getMoveCampLocation();
+		if(rc.getRoundNum() - lastTurnIHeardFromCommander > 500) {
+			archonCommanderID = -1;
+		}
+		while(newHQ != null) {
+			if(archonCommanderID == -1 || newHQ.id == archonCommanderID) {
+				personalHQ = newHQ.location;
+				lastTurnIHeardFromCommander = rc.getRoundNum();
+				archonCommanderID = newHQ.id;
 			}
-			teamMemberNeedsHelp[newDefend.id] = rc.getRoundNum();
-			teamLocations[newDefend.id] = newDefend.location;
-			newDefend = Radio.getDefendLocation();
+			newHQ = Radio.getMoveCampLocation();
 		}
 		while(newMove != null) {
-			moveQueue.add(newMove.location);
+			if(archonCommanderID == -1 || newMove.id == archonCommanderID) {
+				setTarget(newMove.location);
+				lastTurnIHeardFromCommander = rc.getRoundNum();
+				archonCommanderID = newMove.id;
+			}
 			newMove = Radio.getMoveLocation();
 		}
-		while(clearDefend != -1) {
-			teamMemberNeedsHelp[clearDefend] = 0;
-			clearDefend = Radio.getClearDefend();
-		}
+	}
+	private static MapLocation target = null;
+	private static void setTarget(MapLocation loc) throws GameActionException {
+		target = loc;
 	}
 
-	private static void moveSomewhere() throws GameActionException {
-		while(!defendQueue.isEmpty()) {
-			int next = defendQueue.element();
-			if(teamMemberNeedsHelp[next] > 0/* && rc.getRoundNum() - teamMemberNeedsHelp[next] < 200*/) {
-				if(rc.isCoreReady()) {
-					Nav.goTo(teamLocations[next]);
+	private static void sanityCheck() throws GameActionException {
+		boolean insane = false;
+		if(target != null) {
+			int radiusUnsquared = 0;
+			while(++radiusUnsquared * radiusUnsquared <= SIGHT_RANGE);
+			--radiusUnsquared;
+			if(!rc.onTheMap(new MapLocation(myLocation.x - radiusUnsquared, myLocation.y))) {
+				// wall on left side
+				if(target.x <= myLocation.x - radiusUnsquared) {
+					insane = true;
 				}
-				return;
 			}
-			defendQueue.remove();
+			if(!rc.onTheMap(new MapLocation(myLocation.x + radiusUnsquared, myLocation.y))) {
+				// wall on right side
+				if(target.x >= myLocation.x + radiusUnsquared) {
+					insane = true;
+				}
+			}
+			if(!rc.onTheMap(new MapLocation(myLocation.x, myLocation.y + radiusUnsquared))) {
+				// wall on top side
+				if(target.y >= myLocation.y + radiusUnsquared) {
+					insane = true;
+				}
+			}
+			if(!rc.onTheMap(new MapLocation(myLocation.x, myLocation.y - radiusUnsquared))) {
+				// wall on bottom side
+				if(target.y <= myLocation.y - radiusUnsquared) {
+					insane = true;
+				}
+			}
 		}
-		if(!moveQueue.isEmpty()) {
-			MapLocation next = moveQueue.element();
-			if(rc.isCoreReady()) {
-				Nav.goTo(next);
-			}
-			if(rc.canSense(next) && rc.senseRobotAtLocation(next) == null) {
-				moveQueue.remove();
-			}
-			return;
+		if(insane) {
+			setTarget(personalHQ);
 		}
-        if(rc.isCoreReady()) {
-            Nav.goTo(personalHQ);
-            return;
-        }
 	}
 }

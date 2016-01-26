@@ -17,6 +17,26 @@ class SPCombat extends Bot implements SafetyPolicy {
 	}
 }
 
+class SPShortZombie extends Bot implements SafetyPolicy {
+	RobotInfo[] enemies;
+	// helpful for suiciding robots to not make the problem worse
+
+	public SPShortZombie(RobotInfo[] enemies) {
+		this.enemies = enemies;
+	}
+
+	public boolean safe(MapLocation loc) {
+		for(int i = enemies.length; --i >= 0; ) {
+			if(enemies[i].type == RobotType.BIGZOMBIE || enemies[i].type == RobotType.STANDARDZOMBIE) {
+				if(enemies[i].location.distanceSquaredTo(loc) <= enemies[i].type.attackRadiusSquared) {
+					return false;
+				}
+			}
+		}
+		return true;
+	}
+}
+
 public class Combat extends Bot {
 
 	private static RobotInfo[] enemiesIAP = new RobotInfo[100];
@@ -24,6 +44,18 @@ public class Combat extends Bot {
 	private static SafetyPolicy safetyPolicy;
 
 	public static int turnsToKill(RobotInfo attacker, RobotInfo victim) {
+		if(attacker.type == RobotType.GUARD && victim.team == Team.ZOMBIE) {
+			int numAttacksAfterFirstToKill = (int) ((victim.health - 0.001) / 3.0); // guard attack bonus
+			int turnsTillFirstAttack = (int) (attacker.weaponDelay);
+			double subsequentAttackDelay = attacker.type.attackDelay;
+			return (int) (turnsTillFirstAttack + subsequentAttackDelay * numAttacksAfterFirstToKill);
+		}
+		if(attacker.type == RobotType.VIPER && victim.team == Team.ZOMBIE) {
+			int numAttacksAfterFirstToKill = (int) ((victim.health - 0.001) / 2.0); // can't infect zombie
+			int turnsTillFirstAttack = (int) (attacker.weaponDelay);
+			double subsequentAttackDelay = attacker.type.attackDelay;
+			return (int) (turnsTillFirstAttack + subsequentAttackDelay * numAttacksAfterFirstToKill);
+		}
 		int numAttacksAfterFirstToKill = (int) ((victim.health - 0.001) / Util.attackPower(attacker.type));
 		int turnsTillFirstAttack = (int) (attacker.weaponDelay);
 		double subsequentAttackDelay = attacker.type.attackDelay;
@@ -43,9 +75,17 @@ public class Combat extends Bot {
 	public static boolean safe(MapLocation loc, RobotInfo[] enemiesWithinSightRange) {
 		int numAttackers = 0;
 		RobotInfo singleEnemy = null;
+		boolean zombiesAboutToSpawn = false;
+		int[] zombieSpawnRounds = rc.getZombieSpawnSchedule().getRounds();
+		int roundNum = rc.getRoundNum();
+		for(int i = zombieSpawnRounds.length; --i >= 0; ) {
+			if(roundNum <= zombieSpawnRounds[i] && roundNum >= zombieSpawnRounds[i] - 20) {
+				zombiesAboutToSpawn = true;
+			}
+		}
 		for(int i = enemiesWithinSightRange.length; --i >= 0; ) {
 			RobotInfo enemy = enemiesWithinSightRange[i];
-			if(enemy.type == RobotType.ZOMBIEDEN && enemy.location.isAdjacentTo(loc)) {
+			if(zombiesAboutToSpawn && enemy.type == RobotType.ZOMBIEDEN && enemy.location.isAdjacentTo(loc)) {
 				// getting close to zombie dens is dangerous
 				return false;
 			}
@@ -67,6 +107,51 @@ public class Combat extends Bot {
 		return canWin1v1AfterMovingTo(loc, singleEnemy);
 	}
 
+	public static boolean safeToTarget(RobotInfo target, RobotInfo[] enemiesWithinSightRange, RobotInfo[] alliesWithinSightRange) throws GameActionException {
+	/*
+		if(rc.getRoundNum() < 1500) {
+			return true;
+		}
+	*/
+		if(target.team == Team.ZOMBIE) {
+			return true;
+		}
+		if(TYPE != RobotType.VIPER || target.health > 20 * 2 + 5.0) {
+			if(target.viperInfectedTurns + target.zombieInfectedTurns == 0) {
+				return true;
+			}
+			if(target.health > target.viperInfectedTurns * 2 + 5.0) {
+				return true;
+			}
+		}
+		RobotInfo closestRobot = null;
+		for(int i = enemiesWithinSightRange.length; --i >= 0; ) {
+			if(target.location.equals(enemiesWithinSightRange[i].location)) {
+				// this is that robot
+				continue;
+			}
+			if(enemiesWithinSightRange[i].team == enemyTeam && closestRobot == null || enemiesWithinSightRange[i].location.distanceSquaredTo(target.location) < closestRobot.location.distanceSquaredTo(target.location)) {
+				closestRobot = enemiesWithinSightRange[i];
+			}
+		}
+		for(int i = alliesWithinSightRange.length; --i >= 0; ) {
+			if(closestRobot == null || alliesWithinSightRange[i].location.distanceSquaredTo(target.location) < closestRobot.location.distanceSquaredTo(target.location)) {
+				closestRobot = alliesWithinSightRange[i];
+			}
+		}
+		if(closestRobot == null) {
+			return true;
+		}
+		if(closestRobot.team == enemyTeam) {
+			return true;
+		}
+		if(closestRobot.team == Team.ZOMBIE) {
+			// it's going to become a zombie even if we don't attack it
+			return true;
+		}
+		return false;
+	}
+
 	public static RobotInfo bestTarget(RobotInfo[] enemiesWithinSightRange) throws GameActionException {
 		Util.copyEnemiesInAttackPosition(myLocation, enemiesWithinSightRange, enemiesIAP);
 		int enemiesIAPCount = -1;
@@ -81,6 +166,9 @@ public class Combat extends Bot {
 			double bestRatio = 0;
 			for(int i = enemiesIAPCount; --i >= 0; ) {
 				RobotInfo enemy = enemiesIAP[i];
+				if(!safeToTarget(enemy, enemiesWithinSightRange, allies)) {
+					continue;
+				}
 				Util.copyAlliesInAttackPosition(enemy.location, allies, alliesIAP);
 				int attackers = -1;
 				while(alliesIAP[++attackers] != null);
@@ -91,10 +179,14 @@ public class Combat extends Bot {
 						// currently already have a target that is better than this one
 						continue;
 					}
-					if(isTargetSuboptimal || ratio > bestRatio) {
+					if((isTargetSuboptimal && enemy.viperInfectedTurns <= 3) || ratio > bestRatio) {
 						bestRatio = ratio;
 						bestTarget = enemy;
 						isTargetSuboptimal = enemy.viperInfectedTurns > 3;
+					}
+					if(!isTargetSuboptimal && (enemy.type == RobotType.VIPER || enemy.type == RobotType.TURRET)) {
+						// especially deadly, these take top priority ]:
+						return bestTarget;
 					}
 				}
 			}
@@ -103,6 +195,9 @@ public class Combat extends Bot {
 				// see if any enemies that can't hit us are not infected
 				for(int i = enemiesWithinSightRange.length; --i >= 0; ) {
 					RobotInfo enemy = enemiesWithinSightRange[i];
+					if(!safeToTarget(enemy, enemiesWithinSightRange, allies)) {
+						continue;
+					}
 					Util.copyAlliesInAttackPosition(enemy.location, allies, alliesIAP);
 					int attackers = -1;
 					while(alliesIAP[++attackers] != null);
@@ -128,6 +223,9 @@ public class Combat extends Bot {
 				// all possible targets can't hit us, and all others are suboptimal, so just fire somewhere
 				for(int i = enemiesWithinSightRange.length; --i >= 0; ) {
 					RobotInfo enemy = enemiesWithinSightRange[i];
+					if(!safeToTarget(enemy, enemiesWithinSightRange, allies)) {
+						continue;
+					}
 					Util.copyAlliesInAttackPosition(enemy.location, allies, alliesIAP);
 					int attackers = -1;
 					while(alliesIAP[++attackers] != null);
@@ -145,6 +243,9 @@ public class Combat extends Bot {
 			double bestRatio = 0;
 			for(int i = enemiesIAPCount; --i >= 0; ) {
 				RobotInfo enemy = enemiesIAP[i];
+				if(!safeToTarget(enemy, enemiesWithinSightRange, allies)) {
+					continue;
+				}
 				Util.copyAlliesInAttackPosition(enemy.location, allies, alliesIAP);
 				int attackers = -1;
 				while(alliesIAP[++attackers] != null);
@@ -161,6 +262,9 @@ public class Combat extends Bot {
 				// all possible targets can't hit us
 				for(int i = enemiesWithinSightRange.length; --i >= 0; ) {
 					RobotInfo enemy = enemiesWithinSightRange[i];
+					if(!safeToTarget(enemy, enemiesWithinSightRange, allies)) {
+						continue;
+					}
 					Util.copyAlliesInAttackPosition(enemy.location, allies, alliesIAP);
 					int attackers = -1;
 					while(alliesIAP[++attackers] != null);
@@ -220,9 +324,10 @@ public class Combat extends Bot {
 		if(enemiesIAPCount == 1) {
 			// only one enemy who can attack us
 			RobotInfo enemy = enemiesIAP[0];
+			boolean shouldAttack = safeToTarget(enemy, enemiesWithinSightRange, allies);
 			if(TYPE.attackRadiusSquared >= myLocation.distanceSquaredTo(enemy.location)) {
 				// enemy in range
-				if(canWin1v1(enemy)) {
+				if(shouldAttack && canWin1v1(enemy)) {
 					// can win by self
 					attackIfReady(enemy.location);
 					rc.setIndicatorString(0, "can win the 1v1 on turn " + rc.getRoundNum());
@@ -230,7 +335,7 @@ public class Combat extends Bot {
 				}
 				// can't win by self
 				Util.copyAlliesInAttackPosition(enemy.location, allies, alliesIAP);
-				if(alliesIAP[0] != null) {
+				if(shouldAttack && alliesIAP[0] != null) {
 					// i have friends, keep fighting
 					attackIfReady(enemy.location);
 					rc.setIndicatorString(0, "has enough friends on turn " + rc.getRoundNum());
@@ -240,7 +345,9 @@ public class Combat extends Bot {
 				if(rc.getType().cooldownDelay <= 1 && enemy.weaponDelay >= 2
 						&& rc.getWeaponDelay() <= enemy.weaponDelay - 1) {
 					// we can shoot and leave before taking damage
-					attackIfReady(enemy.location);
+					if(shouldAttack) {
+						attackIfReady(enemy.location);
+					}
 					rc.setIndicatorString(0, "can shoot and bounce " + rc.getRoundNum());
 					return;
 				}
@@ -252,13 +359,17 @@ public class Combat extends Bot {
 						return;
 					}
 					// couldn't run anywhere, just fight
-					attackIfReady(enemy.location);
+					if(shouldAttack) {
+						attackIfReady(enemy.location);
+					}
 					return;
 				}
 				// can't move, so attack if it won't slow us down
 				// don't bother attacking if it would slow us down because we came from somewhere, so we aren't stuck
-				if (rc.getType().cooldownDelay <= 1) {
-					attackIfReady(enemy.location);
+				if(shouldAttack) {
+					if (rc.getType().cooldownDelay <= 1) {
+						attackIfReady(enemy.location);
+					}
 				}
 				return;
 			}
@@ -424,17 +535,33 @@ public class Combat extends Bot {
 
 	public static void action() throws GameActionException {
 		enemiesWithinSightRange = rc.senseHostileRobots(myLocation, SIGHT_RANGE);
+		RobotInfo[] otherTeamWithinSightRange = rc.senseNearbyRobots(SIGHT_RANGE, enemyTeam);
 		RobotInfo[] alliesWithinSightRange = rc.senseNearbyRobots(SIGHT_RANGE, myTeam);
 		safetyPolicy = new SPCombat(enemiesWithinSightRange);
 
-		if(enemiesWithinSightRange.length >= 2 && alliesWithinSightRange.length >= 1) { 
+		SafetyPolicy spshort = new SPShortZombie(enemiesWithinSightRange);
+		if(otherTeamWithinSightRange.length >= 2 && alliesWithinSightRange.length >= 3) { 
 			// only suicide if onstensibly in combat
 			if(Util.likelyToBecomeZombie(INFO, enemiesWithinSightRange)) {
 				rc.setIndicatorString(1, "likelyToBecomeZombie");
 				if(rc.isCoreReady()) {
-					for(int i = enemiesWithinSightRange.length; --i >= 0; ) {
-						if(TYPE.cooldownDelay == 1 && enemiesWithinSightRange[i].team == enemyTeam) {
-							Nav.goTo(enemiesWithinSightRange[i].location);
+					for(int i = otherTeamWithinSightRange.length; --i >= 0; ) {
+						if(TYPE.cooldownDelay <= 1.01) {
+							Nav.goTo(otherTeamWithinSightRange[i].location, new SPShortZombie(enemiesWithinSightRange));
+							Direction newDir = myLocation.directionTo(otherTeamWithinSightRange[i].location);
+							if(rc.canMove(newDir) && spshort.safe(otherTeamWithinSightRange[i].location)) {
+								rc.move(newDir);
+							}
+							if(!rc.isCoreReady()) {
+								break;
+							}
+						}
+					}
+				}
+				if(rc.isCoreReady()) {
+					for(int i = otherTeamWithinSightRange.length; --i >= 0; ) {
+						if(TYPE.cooldownDelay <= 1.01) {
+							Nav.goTo(otherTeamWithinSightRange[i].location, spshort);
 							if(!rc.isCoreReady()) {
 								break;
 							}
@@ -462,7 +589,23 @@ public class Combat extends Bot {
 		// not ready; if possible, kite shorter range units
 		if(rc.isCoreReady()) {
 			for(int i = enemiesWithinSightRange.length; --i >= 0; ) {
-				if(TYPE.cooldownDelay == 1 && enemiesWithinSightRange[i].attackPower > 0 && enemiesWithinSightRange[i].type.attackRadiusSquared <= ATTACK_RANGE) {
+				if(TYPE.cooldownDelay <= 1.001 && enemiesWithinSightRange[i].attackPower > 0 && enemiesWithinSightRange[i].type.attackRadiusSquared <= ATTACK_RANGE) {
+					rc.setIndicatorString(1, "trying to kite");
+					Direction newDir = enemiesWithinSightRange[i].location.directionTo(myLocation);
+					MapLocation newLoc = myLocation.add(newDir);
+					if(rc.canMove(newDir) && spshort.safe(newLoc)) {
+						rc.move(newDir);
+					}
+					if(!rc.isCoreReady()) {
+						break;
+					}
+				}
+			}
+		}
+		if(rc.isCoreReady()) {
+			for(int i = enemiesWithinSightRange.length; --i >= 0; ) {
+				if(TYPE.cooldownDelay <= 1.001 && enemiesWithinSightRange[i].attackPower > 0 && enemiesWithinSightRange[i].type.attackRadiusSquared <= ATTACK_RANGE) {
+					rc.setIndicatorString(1, "trying to kite");
 					Nav.goTo(myLocation.add(enemiesWithinSightRange[i].location.directionTo(myLocation)));
 					if(!rc.isCoreReady()) {
 						break;
@@ -475,6 +618,20 @@ public class Combat extends Bot {
 		if(rc.isCoreReady()) {
 			for(int i = alliesWithinSightRange.length; --i >= 0; ) {
 				if(Util.likelyToBecomeZombie(alliesWithinSightRange[i], enemiesWithinSightRange)) {
+					Direction newDir = alliesWithinSightRange[i].location.directionTo(myLocation);
+					MapLocation newLoc = myLocation.add(newDir);
+					if(rc.canMove(newDir) && spshort.safe(newLoc)) {
+						rc.move(newDir);
+					}
+					if(!rc.isCoreReady()) {
+						break;
+					}
+				}
+			}
+		}
+		if(rc.isCoreReady()) {
+			for(int i = alliesWithinSightRange.length; --i >= 0; ) {
+				if(Util.likelyToBecomeZombie(alliesWithinSightRange[i], enemiesWithinSightRange)) {
 					Nav.goTo(myLocation.add(alliesWithinSightRange[i].location.directionTo(myLocation)));
 					if(!rc.isCoreReady()) {
 						break;
@@ -482,7 +639,6 @@ public class Combat extends Bot {
 				}
 			}
 		}
-
 
 		// move closer to zombie dens, archons for maximum damage output, turret for minimum damage received
 		if(rc.isCoreReady()) {

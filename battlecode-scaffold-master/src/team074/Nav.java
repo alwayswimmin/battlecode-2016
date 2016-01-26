@@ -82,6 +82,12 @@ public class Nav extends Bot {
 	}
 
 	private static boolean move(Direction dir) throws GameActionException {
+		if(rc.getType() != RobotType.TTM) {
+			if(rc.senseRubble(myLocation.add(dir)) >= GameConstants.RUBBLE_SLOW_THRESH) {
+				rc.clearRubble(dir);
+				return true;
+			}
+		}
 		rc.move(dir);
 		return true;
 	}
@@ -114,7 +120,6 @@ public class Nav extends Bot {
 			dir = toDest;
             return true;
         }
-
         Direction dirLeft = toDest.rotateLeft();
         Direction dirRight = toDest.rotateRight();
         if (myLocation.add(dirLeft).distanceSquaredTo(dest) < myLocation.add(dirRight).distanceSquaredTo(dest)) {
@@ -139,6 +144,9 @@ public class Nav extends Bot {
 				dir = dirLeft;
                 return true;
             }
+		}
+		if(TYPE == RobotType.SCOUT) {
+			return false;
 		}
 		double rubbleForward = rc.senseRubble(myLocation.add(toDest));
 		double rubbleLeft = rc.senseRubble(myLocation.add(dirLeft));
@@ -256,7 +264,6 @@ public class Nav extends Bot {
 			}
 
 		}
-
 		return false;
 	}
 

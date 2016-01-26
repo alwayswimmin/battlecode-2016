@@ -46,10 +46,14 @@ public class Soldier extends Bot {
 		myLocation = rc.getLocation();
 		processSignals();
 		
+		if(isSurroundedByZombies()) {
+			runAtEnemyArchon();
+		}
+
 		sanityCheck();
 		if(Combat.target != null && myLocation.distanceSquaredTo(Combat.target) < SIGHT_RANGE) {
 			RobotInfo robotAtTarget = rc.senseRobotAtLocation(Combat.target);
-			if(robotAtTarget == null || robotAtTarget.team == Team.NEUTRAL || robotAtTarget.team == myTeam) {
+			if(rc.senseParts(Combat.target) < 1 && (robotAtTarget == null || robotAtTarget.team == Team.NEUTRAL || robotAtTarget.team == myTeam)) {
 				setTarget(personalHQ); // nothing to see here, go home
 			}
 		}
@@ -60,6 +64,36 @@ public class Soldier extends Bot {
 		Combat.action(); // micro attacks
 
 		Radio.clear();
+	}
+
+	private static boolean isSurroundedByZombies() throws GameActionException {
+		if(rc.getRoundNum() < 1500)
+			return false;
+		RobotInfo[] zombiesNB = rc.senseNearbyRobots(SIGHT_RANGE, Team.ZOMBIE);
+		RobotInfo[] enemiesNB = rc.senseNearbyRobots(6, enemyTeam);
+		RobotInfo[] alliesNB = rc.senseNearbyRobots(6, myTeam);
+		return (alliesNB.length < 2 && enemiesNB.length < 2 && zombiesNB.length > 5);
+	}
+
+	private static void runAtEnemyArchon() throws GameActionException {
+		if(rc.isCoreReady()) {
+		int closestEnemyArchonIndex = -1;
+		int bestDistanceToEnemyArchon = 1000000;
+		for(int i = numberOfEnemyArchons, j = 4; --i >= 0 && --j >= 0; ) {
+			if(enemyArchonVisited[i]) {
+				// this enemy was already visited, don't go here again
+				continue;
+			}
+			int distanceToEnemyArchon = myLocation.distanceSquaredTo(enemyArchons[i]);
+			if(closestEnemyArchonIndex == -1 || distanceToEnemyArchon < bestDistanceToEnemyArchon) {
+				closestEnemyArchonIndex = i;
+				bestDistanceToEnemyArchon = distanceToEnemyArchon;
+			}
+		}
+			if(closestEnemyArchonIndex != -1) {
+				Nav.goTo(enemyArchons[closestEnemyArchonIndex]);
+			}
+		}
 	}
 
 	private static void processSignals() throws GameActionException {
@@ -85,7 +119,23 @@ public class Soldier extends Bot {
 			}
 			newMove = Radio.getMoveLocation();
 		}
+		// process incoming scout information concerning enemy archons
+		IdAndMapLocation newEnemyArchon = Radio.getEnemyArchonLocation();
+		while(newEnemyArchon != null) {
+			// add to known archon footprint
+			enemyArchons[numberOfEnemyArchons] = newEnemyArchon.location;
+			enemyArchonVisited[numberOfEnemyArchons] = false;
+			numberOfEnemyArchons++;
+			// read in another archon
+			newEnemyArchon = Radio.getEnemyArchonLocation();
+		}
+
 	}
+	// can have duplicates, since archons move; this functions more as a cyclic stack
+	private static MapLocation[] enemyArchons = new MapLocation[10000];
+	private static boolean[] enemyArchonVisited = new boolean[10000];
+	private static int numberOfEnemyArchons = 0;
+	private static MapLocation target;
 	private static void setTarget(MapLocation loc) throws GameActionException {
 		Combat.target = loc;
 	}
