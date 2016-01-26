@@ -12,6 +12,7 @@ public class Scout extends Bot {
 	private static Direction dirToMove;
 	private static MyQueue<MapLocation> locationsPastFewTurns;
 	private static int myFirstTurn = -1;
+	private static boolean isTurtle = false;
 
 	public static void run(RobotController _rc) throws GameActionException {
 		Bot.init(_rc);
@@ -34,10 +35,10 @@ public class Scout extends Bot {
 		locationsPastFewTurns = new MyQueue<MapLocation>();
 	}
 
-	private static RobotInfo[]   friendsWithinRange;
-	private static RobotInfo[]   enemiesWithinRange;
-	private static RobotInfo[]   zombiesWithinRange;
-	private static RobotInfo[]   neutralsWithinRange;
+	private static RobotInfo[] friendsWithinRange;
+	private static RobotInfo[] enemiesWithinRange;
+	private static RobotInfo[] zombiesWithinRange;
+	private static RobotInfo[] neutralsWithinRange;
 	private static MapLocation[] partsWithinRange;
 	private static int radiusLimit = 4;
 	private static int cooldownPartsBroadcast = 180;
@@ -56,6 +57,32 @@ public class Scout extends Bot {
 			Nav.goTo(rc.getInitialArchonLocations(enemyTeam)[0]);
 		}
 	}
+
+	public static boolean checkIsTurtle() {
+		int turretCount = 0;
+
+		for (int i = 0; i < enemiesWithinRange.length; ++i) {
+			turretCount = 0;
+			if (enemiesWithinRange[i].type != RobotType.TURRET && enemiesWithinRange[i].type != RobotType.TTM)
+				continue;
+
+			MapLocation checkLocation = enemiesWithinRange[i].location;
+			for (int j = 0; j < enemiesWithinRange.length; ++j) {
+				if (enemiesWithinRange[i].type != RobotType.TURRET && enemiesWithinRange[i].type != RobotType.TTM)
+					continue;
+				if (distanceBetween(checkLocation, enemiesWithinRange[j].location) <= 10)
+					++turretCount;
+			}
+
+			if (turretCount >= 5) {
+				isTurtle = true;
+				return true;
+			}
+		}
+
+		return false;
+	}
+
 	private static void action() throws GameActionException {
 		// take my turn
 		myLocation = rc.getLocation();
@@ -94,6 +121,8 @@ public class Scout extends Bot {
 		zombiesWithinRange = rc.senseNearbyRobots(SIGHT_RANGE, Team.ZOMBIE);
 		neutralsWithinRange = rc.senseNearbyRobots(SIGHT_RANGE, Team.NEUTRAL);
 		partsWithinRange = rc.sensePartLocations(SIGHT_RANGE);
+
+		checkIsTurtle();
 
 		int broadcastCount = 0;
 
