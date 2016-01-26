@@ -427,7 +427,7 @@ public class Combat extends Bot {
 		RobotInfo[] alliesWithinSightRange = rc.senseNearbyRobots(SIGHT_RANGE, myTeam);
 		safetyPolicy = new SPCombat(enemiesWithinSightRange);
 
-		if(enemiesWithinSightRange.length >= 3 && alliesWithinSightRange.length >= 2) { 
+		if(enemiesWithinSightRange.length >= 2 && alliesWithinSightRange.length >= 1) { 
 			// only suicide if onstensibly in combat
 			if(Util.likelyToBecomeZombie(INFO, enemiesWithinSightRange)) {
 				rc.setIndicatorString(1, "likelyToBecomeZombie");
