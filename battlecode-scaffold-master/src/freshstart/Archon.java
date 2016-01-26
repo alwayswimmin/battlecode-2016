@@ -202,7 +202,7 @@ public class Archon extends Bot {
 		// 5: VIPER
 		if((rc.getRoundNum() > 200 || shouldBuildScoutsInitially) && (unitsOfTypeBuilt[2] < 1 || Math.random() > 0.90)) {
 			typeToBuild = 2;
-		} else if(Math.random() > 0.85) {
+		} else if(Math.random() > 0.80 && rc.getRoundNum() > 300) {
 			typeToBuild = 5;
 			// typeToBuild = 3; // actually don't build vipers for now
 		} else if(rc.getRoundNum() > 300 && Math.random() > 0.70) {
