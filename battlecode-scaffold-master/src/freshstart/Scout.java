@@ -123,7 +123,8 @@ public class Scout extends Bot {
 				break;
 			case 1:
 				// move randomly
-				for(int i = 8; --i >= 0; ) {
+				
+				/* for(int i = 8; --i >= 0; ) {
 					if(rc.isCoreReady()) {
 						Nav.goTo(myLocation.add(dirToMove).add(dirToMove), new SPAll(rc.senseHostileRobots(myLocation, SIGHT_RANGE)));
 					}
@@ -131,6 +132,7 @@ public class Scout extends Bot {
 						dirToMove = dirToMove.rotateLeft();
 					}
 				}
+
 				for(int i = 8; --i >= 0; ) {
 					if(rc.isCoreReady()) {
 						Nav.goTo(myLocation.add(dirToMove).add(dirToMove));
@@ -138,6 +140,48 @@ public class Scout extends Bot {
 					if(rc.isCoreReady()) {
 						dirToMove = dirToMove.rotateLeft();
 					}
+				} */
+				
+				double centerScoutsX = 0, centerScoutsY = 0;
+				int scoutCount = 0;
+
+				for (int j = 0; j < friendsWithinRange.length; ++j) {
+					if (friendsWithinRange[j].type != RobotType.SCOUT)
+						continue;
+
+					centerScoutsX += friendsWithinRange[j].location.x;
+					centerScoutsY += friendsWithinRange[j].location.y;
+					scoutCount++;
+				}
+
+				if (scoutCount != 0.0) {
+					centerScoutsX /= scoutCount;
+					centerScoutsY /= scoutCount;
+
+					double maxDist = 0;
+
+					for (int i = 0; i < 8; ++i) {
+						if (rc.canMove(directions[i])) {
+							double goToX = (double)(rc.getLocation().add(directions[i]).x);
+							double goToY = (double)(rc.getLocation().add(directions[i]).y);
+
+							double diffX = goToX - centerScoutsX;
+							double diffY = goToY - centerScoutsY;
+
+							if (diffX*diffX + diffY*diffY > maxDist) {
+								maxDist = diffX*diffX + diffY*diffY;
+								dirToMove = directions[i];
+							}
+						}
+					}
+				}
+
+				if(rc.isCoreReady()) {
+					Nav.goTo(myLocation.add(dirToMove).add(dirToMove), new SPAll(rc.senseHostileRobots(myLocation, SIGHT_RANGE)));
+				}
+
+				if(rc.isCoreReady()) {
+					Nav.goTo(myLocation.add(dirToMove).add(dirToMove));
 				}
 
 				locationsPastFewTurns.add(new MapLocation(myLocation.x, myLocation.y));
@@ -147,7 +191,9 @@ public class Scout extends Bot {
 						dirToMove = directions[rand.nextInt(1000) % 8];
 					}
 				}
+
 				break;
+
 			case 2:
 				// follow offensive turret
 				boolean shouldMoveAway = false;
