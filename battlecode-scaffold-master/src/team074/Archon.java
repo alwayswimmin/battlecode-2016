@@ -3,6 +3,28 @@ package team074;
 import battlecode.common.*;
 import java.util.*;
 
+class SPFollow implements SafetyPolicy {
+	MapLocation myLocation;
+	RobotInfo[] friends;
+
+	public SPFollow(MapLocation _myLocation, RobotInfo[] _friends) {
+		myLocation = _myLocation;
+		friends = _friends;
+	}
+
+	public boolean safe(MapLocation loc) throws GameActionException {
+		Direction toLoc = myLocation.directionTo(loc);
+		for(int i = friends.length; --i >= 0; ) {
+			int dx = friends[i].location.x - myLocation.x;
+			int dy = friends[i].location.y - myLocation.y;
+			if(dx * toLoc.dx >= 0 && dy * toLoc.dy >= 0 && Math.abs(dx) > Math.abs(toLoc.dx) && Math.abs(dy) > Math.abs(toLoc.dy)) {
+				return true;
+			}
+		}
+		return Util.isCorner(loc);
+	}
+}
+
 public class Archon extends Bot {
 	private static int forcedMoveCounter = 0; // when Archon is forced to move in a fixed direction
 	private static Direction forcedMoveDir;
@@ -11,26 +33,28 @@ public class Archon extends Bot {
 	private static MapLocation[] initialEnemyArchonLocations;
 	private static MapLocation[] initialMyArchonLocations;
 
-	private static MapLocation[] dens = new MapLocation[100];
-	private static boolean[] denVisited = new boolean[100];
+	private static MapLocation[] dens = new MapLocation[10000];
+	private static boolean[] denVisited = new boolean[10000];
 	private static int numberOfDens = 0;
 
-	private static MapLocation[] neutrals = new MapLocation[100];
-	private static boolean[] neutralVisited = new boolean[100];
+	private static MapLocation[] neutrals = new MapLocation[10000];
+	private static boolean[] neutralVisited = new boolean[10000];
 	private static int numberOfNeutrals = 0;
 
-	private static MapLocation[] parts = new MapLocation[100];
-	private static boolean[] partsVisited = new boolean[100];
+	private static MapLocation[] parts = new MapLocation[10000];
+	private static boolean[] partsVisited = new boolean[10000];
 	private static int numberOfParts = 0;
 
 	// can have duplicates, since archons move; this functions more as a cyclic stack
-	private static MapLocation[] enemyArchons = new MapLocation[100];
-	private static boolean[] enemyArchonVisited = new boolean[100];
+	private static MapLocation[] enemyArchons = new MapLocation[10000];
+	private static boolean[] enemyArchonVisited = new boolean[10000];
 	private static int numberOfEnemyArchons = 0;
 
 	// for running away
 	private static int turnsSinceEnemySeen = 100;
 	private static int consecutiveTurnsOfEnemy = 0;
+
+	private static SafetyPolicy policy;
 
 	// 0: ARCHON
 	// 1: GUARD
@@ -53,10 +77,13 @@ public class Archon extends Bot {
 		Bot.init(_rc);
 		init();
 		while(true) {
-			updateHealth();
-			Radio.process();
-			action();
-			Radio.clear();
+			try {
+				updateHealth();
+				Radio.process();
+				action();
+				Radio.clear();
+			} catch(Exception e) {
+			}
 			Clock.yield();
 		}
 	}
@@ -86,6 +113,7 @@ public class Archon extends Bot {
 			Radio.broadcastMoveCampLocation(myLocation, 1000);
 		}
 		updateVisited();
+		policy = new SPFollow(myLocation, rc.senseNearbyRobots(SIGHT_RANGE, myTeam));
 
 		// make forced moves if forced move counter is non-zero
 		// implemented by yang for running away from corners
@@ -126,18 +154,22 @@ public class Archon extends Bot {
 		if(hostileWithinRange.length != 0) {
 			// if enemies in range, call friends to defend
 			// TODO: change to run in direction that maximizes distance, to prevent getting trapped against walls
-			int enemyCount = hostileWithinRange.length;
 			if(turnsSinceEnemySeen > 5) { // waits at least 5 turns between broadcasts
 				Radio.broadcastDefendLocation(myLocation, 1000);
 			}
 			turnsSinceEnemySeen = 0;
 			consecutiveTurnsOfEnemy++;
+			int enemyCount = 0;
 			// finds centroid of visible enemies
-			for(int i = enemyCount; --i >= 0; ) {
-				enemyCentroidX += hostileWithinRange[i].location.x;
-				enemyCentroidY += hostileWithinRange[i].location.y;
+			for(int i = hostileWithinRange.length; --i >= 0; ) {
+				if(hostileWithinRange[i].attackPower > 0) {
+					enemyCentroidX += hostileWithinRange[i].location.x;
+					enemyCentroidY += hostileWithinRange[i].location.y;
+					enemyCount++;
+				}
 			}
 			enemyCentroid = new MapLocation(enemyCentroidX / enemyCount, enemyCentroidY / enemyCount);
+			rc.setIndicatorString(0, "enemy at " + enemyCentroid.x + ", " + enemyCentroid.y);
 		} else {
 			// no enemies seen
 			turnsSinceEnemySeen++;
@@ -227,7 +259,8 @@ public class Archon extends Bot {
 				int dx = myLocation.x - enemyCentroid.x;
 				int dy = myLocation.y - enemyCentroid.y;
 				MapLocation dest = new MapLocation(myLocation.x + 3 * dx, myLocation.y + 3 * dy);
-				Nav.goTo(dest, new SPAll(hostileWithinRange));
+				Nav.goTo(dest);
+				// Combat.retreat(hostileWithinRange);
 			} else if(typeToBuild != -1 && rc.hasBuildRequirements(robotTypes[typeToBuild]) && (rc.getRoundNum() < 550 || rc.getTeamParts() > 130)) {
 				// tries to build new robots
 				Direction dirToBuild = Direction.EAST;
@@ -244,10 +277,20 @@ public class Archon extends Bot {
 			} else if(rc.isCoreReady()) {
 				// tries to move to neutrals and parts
 				if(neutralWithinRange.length > 0) {
-					Nav.goTo(neutralWithinRange[0].location);
+					Nav.goTo(neutralWithinRange[0].location, policy);
 				}
 				if(rc.isCoreReady()) {
 					MapLocation[] partsLocations = rc.sensePartLocations(SIGHT_RANGE);
+					if(partsLocations.length > 0) {
+						int minindex = 0;
+						for(int i = partsLocations.length; --i > 0; ) {
+							if(partsLocations[i].distanceSquaredTo(myLocation) < partsLocations[minindex].distanceSquaredTo(myLocation)) {
+								minindex = i;
+							}
+						}
+						Nav.goTo(partsLocations[minindex], policy);
+					}
+					/*
 					if(partsLocations.length > 0) {
 						int maxindex = 0;
 						for(int i = partsLocations.length; --i > 0; ) {
@@ -255,8 +298,9 @@ public class Archon extends Bot {
 								maxindex = i;
 							}
 						}
-						Nav.goTo(partsLocations[maxindex]);
+						Nav.goTo(partsLocations[maxindex], policy);
 					}
+					*/
 				}
 			}
 		}
@@ -272,7 +316,7 @@ public class Archon extends Bot {
 			}
 			for(int i = 0; i < 8; ++i) {
 				if(rc.canMove(dirToMove)) {
-					Nav.goTo(myLocation.add(dirToMove));
+					Nav.goTo(myLocation.add(dirToMove), policy);
 					break;
 				}
 				dirToMove = dirToMove.rotateLeft();
@@ -499,9 +543,19 @@ public class Archon extends Bot {
 		}
 
 		// hard ignore enemies if round is premature
-		if(rc.getRoundNum() < 1500) {
+		if(rc.getRoundNum() < 500) {
 			closestEnemyArchonIndex = -1;
 			bestDistanceToEnemyArchon = 1000000;
+		}
+
+		// hard ignore everything else if round is high
+		if(rc.getRobotCount() > 100 || rc.getRoundNum() > 2250) {
+			closestDenIndex = -1;
+			closestNeutralIndex = -1;
+			closestPartsIndex = -1;
+			bestDistanceToDen = 1000000;
+			bestDistanceToNeutral = 1000000;
+			bestDistanceToParts = 1000000;
 		}
 
 		if(closestDenIndex == -1 && closestPartsIndex == -1 && closestNeutralIndex == -1 && closestEnemyArchonIndex == -1) {
@@ -576,17 +630,17 @@ public class Archon extends Bot {
 			target = location;
 		}
 		if(rc.isCoreReady()) {
-			Nav.goTo(target);
+			Nav.goTo(target, policy);
 		}
 	}
 
 	private static void seekEnemy(MapLocation location) throws GameActionException {
 		if(target == null || !target.equals(location) || rc.getRoundNum() % 50 == 0) {
-			Radio.broadcastMoveLocation(new MapLocation(6 * location.x - myLocation.x, 6 * location.y - myLocation.y), 1000);
+			Radio.broadcastMoveLocation(new MapLocation((6 * location.x - 1 * myLocation.x) / 5, (6 * location.y - 1 * myLocation.y) / 5), 1000);
 			target = location;
 		}
 		if(rc.isCoreReady()) {
-			Nav.goTo(target);
+			Nav.goTo(target, policy);
 		}
 	}
 
@@ -596,7 +650,7 @@ public class Archon extends Bot {
 			target = location;
 		}
 		if(rc.isCoreReady()) {
-			Nav.goTo(target);
+			Nav.goTo(target, policy);
 		}
 	}
 
@@ -606,7 +660,7 @@ public class Archon extends Bot {
 			target = location;
 		}
 		if(rc.isCoreReady()) {
-			Nav.goTo(target);
+			Nav.goTo(target, policy);
 		}
 	}
 
