@@ -139,6 +139,9 @@ public class Nav extends Bot {
                 return true;
             }
 		}
+		if(TYPE == RobotType.SCOUT) {
+			return false;
+		}
 		double rubbleForward = rc.senseRubble(myLocation.add(toDest));
 		double rubbleLeft = rc.senseRubble(myLocation.add(dirLeft));
 		double rubbleRight = rc.senseRubble(myLocation.add(dirRight));

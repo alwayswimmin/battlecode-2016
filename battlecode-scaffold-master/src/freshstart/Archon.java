@@ -168,6 +168,7 @@ public class Archon extends Bot {
 					enemyCount++;
 				}
 			}
+			if(enemyCount != 0)
 			enemyCentroid = new MapLocation(enemyCentroidX / enemyCount, enemyCentroidY / enemyCount);
 			rc.setIndicatorString(0, "enemy at " + enemyCentroid.x + ", " + enemyCentroid.y);
 		} else {
@@ -200,14 +201,15 @@ public class Archon extends Bot {
 		// 3: SOLDIER
 		// 4: TURRET/TTM
 		// 5: VIPER
-		if((rc.getRoundNum() > 200 || shouldBuildScoutsInitially) && (unitsOfTypeBuilt[2] < 1 || Math.random() > 0.90)) {
+		if((rc.getRoundNum() > 200 || shouldBuildScoutsInitially) && (unitsOfTypeBuilt[2] < 1 || Math.random() > 0.95)) {
 			typeToBuild = 2;
-		} else if(Math.random() > 0.80 && rc.getRoundNum() > 300) {
+		} else if(Math.random() > 0.85 && rc.getRoundNum() > 300) {
 			typeToBuild = 5;
 			// typeToBuild = 3; // actually don't build vipers for now
-		} else if(rc.getRoundNum() > 300 && Math.random() > 0.70) {
-			// typeToBuild = 1;
-			typeToBuild = 3; // actually don't build guards for now, or probably ever
+		} else if(rc.getRoundNum() > 300 && Math.random() > 0.85) {
+			// turret
+			// typeToBuild = 4;
+			typeToBuild = 3;
 		} else {
 			typeToBuild = 3;
 		}
@@ -388,7 +390,7 @@ public class Archon extends Bot {
 		IdAndMapLocation newDen = Radio.getDenLocation();
 		while(newDen != null) {
 			boolean isNotReallyNewDen = false;
-			for(int i = numberOfDens; --i >= 0; ) {
+		for(int i = numberOfDens, j = 20; --i >= 0 && --j >= 0; ) {
 				if(newDen.location.equals(dens[i])) {
 					isNotReallyNewDen = true;
 					break;
@@ -420,7 +422,7 @@ public class Archon extends Bot {
 		IdAndMapLocation newNeutral = Radio.getNeutralLocation(); 
 		while(newNeutral != null) {
 			boolean isNotReallyNewNeutral = false;
-			for(int i = numberOfNeutrals; --i >= 0; ) {
+		for(int i = numberOfNeutrals, j = 20; --i >= 0 && --j >= 0; ) {
 				if(newNeutral.location.equals(neutrals[i])) {
 					isNotReallyNewNeutral = true;
 					break;
@@ -441,7 +443,7 @@ public class Archon extends Bot {
 		IdAndMapLocation newParts = Radio.getPartsLocation();
 		while(newParts != null) {
 			boolean isNotReallyNewParts = false;
-			for(int i = numberOfParts; --i >= 0; ) {
+		for(int i = numberOfParts, j = 20; --i >= 0 && --j >= 0; ) {
 				if(newParts.location.equals(parts[i])) {
 					isNotReallyNewParts = true;
 					break;
@@ -460,7 +462,7 @@ public class Archon extends Bot {
 	}
 
 	private static void updateVisited() throws GameActionException {
-		for(int i = numberOfDens; --i >= 0; ) {
+		for(int i = numberOfDens, j = 20; --i >= 0 && --j >= 0; ) {
 			if(rc.canSense(dens[i])) {
 				RobotInfo robotAtLocation = rc.senseRobotAtLocation(dens[i]);
 				if(robotAtLocation == null || robotAtLocation.type != RobotType.ZOMBIEDEN) {
@@ -468,7 +470,7 @@ public class Archon extends Bot {
 				}
 			}
 		}
-		for(int i = numberOfParts; --i >= 0; ) {
+		for(int i = numberOfParts, j = 20; --i >= 0 && --j >= 0; ) {
 			if(rc.canSense(parts[i])) {
 				double partValue = rc.senseParts(parts[i]);
 				if(partValue < 5.0) {
@@ -476,7 +478,7 @@ public class Archon extends Bot {
 				}
 			}
 		}
-		for(int i = numberOfNeutrals; --i >= 0; ) {
+		for(int i = numberOfNeutrals, j = 20; --i >= 0 && --j >= 0; ) {
 			if(rc.canSense(neutrals[i])) {
 				RobotInfo robotAtLocation = rc.senseRobotAtLocation(neutrals[i]);
 				if(robotAtLocation == null || robotAtLocation.team != Team.NEUTRAL) {
@@ -484,7 +486,7 @@ public class Archon extends Bot {
 				}
 			}
 		}
-		for(int i = numberOfEnemyArchons; --i >= 0; ) {
+		for(int i = numberOfEnemyArchons, j = 20; --i >= 0 && --j >= 0; ) {
 			if(myLocation.distanceSquaredTo(enemyArchons[i]) <= 16) {
 				RobotInfo robotAtLocation = rc.senseRobotAtLocation(enemyArchons[i]);
 				if(robotAtLocation == null || robotAtLocation.team != enemyTeam) {
@@ -579,7 +581,7 @@ public class Archon extends Bot {
 		}
 
 		// hard ignore everything else if we should attack
-		if(closestEnemyArchonIndex != -1 && (rc.getRobotCount() > 100 || rc.getRobotCount() > 40 && rc.getRoundNum() > 2500)) {
+		if(closestEnemyArchonIndex != -1 && (rc.getRobotCount() > 80 || rc.getRobotCount() > 40 && rc.getRoundNum() > 1900)) {
 			closestDenIndex = -1;
 			closestNeutralIndex = -1;
 			closestPartsIndex = -1;

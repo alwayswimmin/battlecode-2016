@@ -42,9 +42,52 @@ public class Scout extends Bot {
 	private static int radiusLimit = 4;
 	private static int cooldownPartsBroadcast = 180;
 
+	private static boolean isSurroundedByZombies() throws GameActionException {
+		if(rc.getRoundNum() < 1500)
+			return false;
+		RobotInfo[] zombiesNB = rc.senseNearbyRobots(SIGHT_RANGE, Team.ZOMBIE);
+		RobotInfo[] enemiesNB = rc.senseNearbyRobots(6, enemyTeam);
+		RobotInfo[] alliesNB = rc.senseNearbyRobots(6, myTeam);
+		return (alliesNB.length < 2 && enemiesNB.length < 2 && zombiesNB.length > 5);
+	}
+
+	private static void runAtEnemyArchon() throws GameActionException {
+		if(rc.isCoreReady()) {
+			Nav.goTo(rc.getInitialArchonLocations(enemyTeam)[0]);
+		}
+	}
 	private static void action() throws GameActionException {
 		// take my turn
 		myLocation = rc.getLocation();
+		if(isSurroundedByZombies())
+			runAtEnemyArchon();
+
+		int enemyCentroidX = 0, enemyCentroidY = 0;
+		MapLocation enemyCentroid = null;
+		RobotInfo[] hostileWithinRange = rc.senseHostileRobots(myLocation, SIGHT_RANGE);
+		if(hostileWithinRange.length != 0) {
+			int enemyCount = 0;
+			// finds centroid of visible enemies
+			for(int i = hostileWithinRange.length; --i >= 0; ) {
+				if(hostileWithinRange[i].attackPower > 0) {
+					enemyCentroidX += hostileWithinRange[i].location.x;
+					enemyCentroidY += hostileWithinRange[i].location.y;
+					enemyCount++;
+				}
+			}
+			if(enemyCount != 0)
+			enemyCentroid = new MapLocation(enemyCentroidX / enemyCount, enemyCentroidY / enemyCount);
+		}
+		if(enemyCentroid != null) {
+
+					int dx = myLocation.x - enemyCentroid.x;
+					int dy = myLocation.y - enemyCentroid.y;
+					MapLocation dest = new MapLocation(myLocation.x + 3 * dx, myLocation.y + 3 * dy);
+					Combat.retreat(hostileWithinRange);
+					if(rc.isCoreReady()) {
+						Nav.goTo(dest);
+					}
+		}
 
 		friendsWithinRange = rc.senseNearbyRobots(SIGHT_RANGE, myTeam);
 		enemiesWithinRange = rc.senseNearbyRobots(SIGHT_RANGE, enemyTeam);
@@ -53,7 +96,6 @@ public class Scout extends Bot {
 		partsWithinRange = rc.sensePartLocations(SIGHT_RANGE);
 
 		int broadcastCount = 0;
-
 
 		for(int i = zombiesWithinRange.length; --i >= 0; ) {
 			if(broadcastCount < 20 && (robotsEncountered[zombiesWithinRange[i].ID] == null || rc.getRoundNum() - turnBroadcasted[zombiesWithinRange[i].ID] > 100) && zombiesWithinRange[i].type == RobotType.ZOMBIEDEN) {
