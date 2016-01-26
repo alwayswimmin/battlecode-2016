@@ -3,7 +3,7 @@ package freshstart;
 import battlecode.common.*;
 
 interface SafetyPolicy {
-	public boolean safe(MapLocation loc);
+	public boolean safe(MapLocation loc) throws GameActionException ;
 }
 
 // avoid none
@@ -86,7 +86,7 @@ public class Nav extends Bot {
 		return true;
 	}
 
-	private static boolean canMove(Direction dir) {
+	private static boolean canMove(Direction dir) throws GameActionException {
 		return rc.canMove(dir) && policy.safe(myLocation.add(dir));
 	}
 	// used to move directly or 45 degrees off. return true if worked.
