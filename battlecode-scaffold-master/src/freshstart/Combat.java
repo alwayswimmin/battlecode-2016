@@ -409,45 +409,28 @@ public class Combat extends Bot {
 		if (rc.isWeaponReady()) {
 			rc.attackLocation(loc);
 		}
-		// not ready; if possible, kite shorter range units
-		if(rc.isCoreReady()) {
-			for(int i = enemiesWithinSightRange.length; --i >= 0; ) {
-				if(TYPE.cooldownDelay == 1 && enemiesWithinSightRange[i].attackPower > 0 && enemiesWithinSightRange[i].type.attackRadiusSquared <= ATTACK_RANGE) {
-					Nav.goTo(myLocation.add(enemiesWithinSightRange[i].location.directionTo(myLocation)));
-					if(!rc.isCoreReady()) {
-						break;
-					}
-				}
-			}
-		}
-
-		// move closer to zombie dens, archons for maximum damage output, turret for minimum damage received
-		if(rc.isCoreReady()) {
-			for(int i = enemiesWithinSightRange.length; --i >= 0; ) {
-				if(enemiesWithinSightRange[i].type == RobotType.ZOMBIEDEN || enemiesWithinSightRange[i].type == RobotType.ARCHON
-						|| enemiesWithinSightRange[i].type == RobotType.TTM || enemiesWithinSightRange[i].type == RobotType.TURRET) {
-					Nav.goTo(myLocation.add(enemiesWithinSightRange[i].location.directionTo(myLocation)), safetyPolicy);
-					if(!rc.isCoreReady()) {
-						break;
-					}
-				}
-			}
-		}
-
 	}
 
 	private static RobotInfo[] enemiesWithinSightRange;
-	static boolean firstTurn = true;
 	private static int turnsSinceLastAttack = 100;
 	static MapLocation target = null;
 
 	public static void action() throws GameActionException {
-		if (firstTurn) {
-			firstTurn = false;
-		}
-
 		enemiesWithinSightRange = rc.senseHostileRobots(myLocation, SIGHT_RANGE);
 		safetyPolicy = new SPCombat(enemiesWithinSightRange);
+
+		if(Util.likelyToBecomeZombie(INFO, enemiesWithinSightRange)) {
+			if(rc.isCoreReady()) {
+				for(int i = enemiesWithinSightRange.length; --i >= 0; ) {
+					if(TYPE.cooldownDelay == 1 && enemiesWithinSightRange[i].team == enemyTeam) {
+						Nav.goTo(enemiesWithinSightRange[i].location);
+						if(!rc.isCoreReady()) {
+							break;
+						}
+					}
+				}
+			}
+		}
 
 		if(enemiesWithinSightRange.length > 0) {
 			fight(enemiesWithinSightRange);
@@ -463,6 +446,46 @@ public class Combat extends Bot {
 
 			}
 		}
+
+		// not ready; if possible, kite shorter range units
+		if(rc.isCoreReady()) {
+			for(int i = enemiesWithinSightRange.length; --i >= 0; ) {
+				if(TYPE.cooldownDelay == 1 && enemiesWithinSightRange[i].attackPower > 0 && enemiesWithinSightRange[i].type.attackRadiusSquared <= ATTACK_RANGE) {
+					Nav.goTo(myLocation.add(enemiesWithinSightRange[i].location.directionTo(myLocation)));
+					if(!rc.isCoreReady()) {
+						break;
+					}
+				}
+			}
+		}
+
+		// move away from friends who might become zombies
+		if(rc.isCoreReady()) {
+			RobotInfo[] alliesWithinSightRange = rc.senseNearbyRobots(SIGHT_RANGE, myTeam);
+			for(int i = alliesWithinSightRange.length; --i >= 0; ) {
+				if(Util.likelyToBecomeZombie(alliesWithinSightRange[i], enemiesWithinSightRange)) {
+					Nav.goTo(myLocation.add(alliesWithinSightRange[i].location.directionTo(myLocation)));
+					if(!rc.isCoreReady()) {
+						break;
+					}
+				}
+			}
+		}
+
+
+		// move closer to zombie dens, archons for maximum damage output, turret for minimum damage received
+		if(rc.isCoreReady()) {
+			for(int i = enemiesWithinSightRange.length; --i >= 0; ) {
+				if(enemiesWithinSightRange[i].type == RobotType.ZOMBIEDEN || enemiesWithinSightRange[i].type == RobotType.ARCHON
+						|| enemiesWithinSightRange[i].type == RobotType.TTM || enemiesWithinSightRange[i].type == RobotType.TURRET) {
+					Nav.goTo(myLocation.add(enemiesWithinSightRange[i].location.directionTo(myLocation)), safetyPolicy);
+					if(!rc.isCoreReady()) {
+						break;
+					}
+				}
+			}
+		}
+
 
 		if(turnsSinceLastAttack >= 4 && rc.isCoreReady() /*&& (rc.getRoundNum() - ID) % 7 == 0*/) {
 			// System.out.println("trying to move randomly");
