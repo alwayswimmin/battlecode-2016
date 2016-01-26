@@ -151,6 +151,14 @@ public class Archon extends Bot {
 		RobotInfo[] neutralWithinRange = rc.senseNearbyRobots(SIGHT_RANGE, Team.NEUTRAL);
 		RobotInfo[] friendWithinRange = rc.senseNearbyRobots(SIGHT_RANGE, myTeam);
 
+		if(rc.isCoreReady()) {
+
+				if(neutralWithinRange.length > 0) {
+					// Nav.goTo(neutralWithinRange[0].location, policy);
+					seekNeutral(neutralWithinRange[0].location);
+				}
+		}
+
 		// processes friends and tries to heal them
 		// TODO: some metric for best friend to heal
 		for(int i = 0; i < friendWithinRange.length; ++i) {
@@ -215,7 +223,7 @@ public class Archon extends Bot {
 		// 3: SOLDIER
 		// 4: TURRET/TTM
 		// 5: VIPER
-		if((rc.getRoundNum() > 200 || shouldBuildScoutsInitially) && (unitsOfTypeBuilt[2] < 1 || Math.random() > 0.90)) {
+		if((rc.getRoundNum() > 200 || shouldBuildScoutsInitially) && (unitsOfTypeBuilt[2] < 1 || Math.random() > 0.93)) {
 			typeToBuild = 2;
 		} else if(Math.random() > 0.85 && rc.getRoundNum() > 300) {
 			typeToBuild = 5;
@@ -940,7 +948,11 @@ public class Archon extends Bot {
 			target = location;
 		}
 		if(rc.isCoreReady()) {
-			Nav.goTo(target, policy);
+			if(rc.canSense(location)) {
+				Nav.goTo(target);
+			} else {
+				Nav.goTo(target, policy);
+			}
 		}
 	}
 

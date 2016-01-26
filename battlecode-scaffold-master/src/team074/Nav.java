@@ -82,7 +82,7 @@ public class Nav extends Bot {
 	}
 
 	private static boolean move(Direction dir) throws GameActionException {
-		if(rc.getType() != RobotType.TTM) {
+		if(rc.getType() != RobotType.TTM && rc.getType() != RobotType.SCOUT && rc.getType() != RobotType.ARCHON) {
 			if(rc.senseRubble(myLocation.add(dir)) >= GameConstants.RUBBLE_SLOW_THRESH) {
 				rc.clearRubble(dir);
 				return true;
