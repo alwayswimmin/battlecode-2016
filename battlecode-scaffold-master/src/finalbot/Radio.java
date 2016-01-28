@@ -1,5 +1,5 @@
 // class for managing signaling and communication over channels
-package final;
+package finalbot;
 
 import battlecode.common.*;
 import java.util.*;

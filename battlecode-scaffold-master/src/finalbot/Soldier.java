@@ -1,4 +1,4 @@
-package final;
+package finalbot;
 
 import battlecode.common.*;
 import java.util.*;
