@@ -1,4 +1,4 @@
-package team074;
+package final;
 
 import battlecode.common.*;
 import java.util.*;
@@ -151,6 +151,14 @@ public class Archon extends Bot {
 		RobotInfo[] neutralWithinRange = rc.senseNearbyRobots(SIGHT_RANGE, Team.NEUTRAL);
 		RobotInfo[] friendWithinRange = rc.senseNearbyRobots(SIGHT_RANGE, myTeam);
 
+		if(rc.isCoreReady()) {
+
+				if(neutralWithinRange.length > 0) {
+					// Nav.goTo(neutralWithinRange[0].location, policy);
+					seekNeutral(neutralWithinRange[0].location);
+				}
+		}
+
 		// processes friends and tries to heal them
 		// TODO: some metric for best friend to heal
 		for(int i = 0; i < friendWithinRange.length; ++i) {
@@ -202,15 +210,6 @@ public class Archon extends Bot {
 				canActivate = i;
 			}
 		}
-		
-		if(canActivate == -1 && rc.isCoreReady()) {
-
-				if(neutralWithinRange.length > 0) {
-					// Nav.goTo(neutralWithinRange[0].location, policy);
-					seekNeutral(neutralWithinRange[0].location);
-				}
-		}
-
 
 		int typeToBuild;
 		boolean addedRobot;

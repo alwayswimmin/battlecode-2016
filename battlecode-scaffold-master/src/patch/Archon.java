@@ -1,4 +1,4 @@
-package team074;
+package patch;
 
 import battlecode.common.*;
 import java.util.*;
