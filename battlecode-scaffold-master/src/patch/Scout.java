@@ -42,8 +42,6 @@ public class Scout extends Bot {
 	private static int radiusLimit = 4;
 	private static int cooldownPartsBroadcast = 180;
 
-	private static MapLocation lastSeenArchonLocation = null;
-
 	private static boolean isSurroundedByZombies() throws GameActionException {
 		if(rc.getRoundNum() < 1500)
 			return false;
@@ -54,8 +52,8 @@ public class Scout extends Bot {
 	}
 
 	private static void runAtEnemyArchon() throws GameActionException {
-		if(rc.isCoreReady() && lastSeenArchonLocation != null) {
-			Nav.goTo(lastSeenArchonLocation);
+		if(rc.isCoreReady()) {
+			Nav.goTo(rc.getInitialArchonLocations(enemyTeam)[0]);
 		}
 	}
 	private static void action() throws GameActionException {
@@ -120,9 +118,6 @@ public class Scout extends Bot {
 				turnBroadcasted[enemiesWithinRange[i].ID] = rc.getRoundNum();
 				Radio.broadcastEnemyArchonLocation(enemiesWithinRange[i].location, 1000);
 				++broadcastCount;
-			}
-			if(enemiesWithinRange[i].type == RobotType.ARCHON) {
-				lastSeenArchonLocation = enemiesWithinRange[i].location;
 			}
 		}
 
